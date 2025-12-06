@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Trader Brothers LTD - Quotation Tool</title>
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#fbbf24">
+    <link rel="stylesheet" href="styles.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="logo">
+                <img src="https://github.com/infotraderbrothers-lgtm/traderbrothers-assets-logo/blob/main/Trader%20Brothers.png?raw=true" alt="TB Logo">
+            </div>
+            <div class="header-text">
+                <h1>TRADER BROTHERS LTD</h1>
+                <p>Professional Quotation Tool</p>
+            </div>
+        </div>
+
+        <div class="estimate-counter">
+            Next Estimate Number: <span id="estimateCounter">#0001</span>
+        </div>
+
+        <div class="section">
+            <h2 class="section-title">Client Information</h2>
+            <div class="form-grid">
+                <div class="form-group">
+                    <label>Client Name *</label>
+                    <input type="text" id="clientName" placeholder="Enter full name (e.g., Dean Finlayson)">
+                </div>
+                <div class="form-group">
+                    <label>Client Phone</label>
+                    <input type="text" id="clientPhone" placeholder="Enter phone number">
+                </div>
+                <div class="form-group">
+                    <label>Project Name</label>
+                    <input type="text" id="projectName" placeholder="Enter project name">
+                </div>
+                <div class="form-group">
+                    <label>Project Address *</label>
+                    <input type="text" id="projectAddress" placeholder="Enter full address">
+                </div>
+                <div class="form-group">
+                    <label>Customer ID (Auto-generated)</label>
+                    <input type="text" id="customerId" placeholder="Auto-generated from name" disabled>
+                </div>
+                <div class="form-group">
+                    <label>Deposit Percentage</label>
+                    <input type="number" id="depositPercent" value="30" min="0" max="100">
+                </div>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2 class="section-title">Add Line Item</h2>
+            
+            <div class="form-grid">
+                <div class="form-group">
+                    <label>Trade Category</label>
+                    <select id="tradeCategory">
+                        <option value="">Select a trade...</option>
+                        <option value="Downtakings">Downtakings</option>
+                        <option value="General Building">General Building</option>
+                        <option value="Building work">Building work</option>
+                        <option value="Carpentry">Carpentry</option>
+                        <option value="Joinery">Joinery</option>
+                        <option value="Electrical">Electricals</option>
+                        <option value="Plumbing">Plumbing</option>
+                        <option value="Gas work/Plumbing">Gas work/Plumbing</option>
+                        <option value="Plastering">Plastering</option>
+                        <option value="Skimming /Painting">Skimming /Painting</option>
+                        <option value="Painting & Decorating">Painting & Decorating</option>
+                        <option value="Tiling">Tiling</option>
+                        <option value="Roofing">Roofing</option>
+                        <option value="Kitchen Fitting">Kitchen Fitting</option>
+                        <option value="Bathroom Fitting">Bathrooms</option>
+                        <option value="Flooring">Flooring</option>
+                        <option value="Bricklaying">Bricklaying</option>
+                        <option value="HVAC">HVAC (Heating & Ventilation)</option>
+                        <option value="Groundworks">Groundworks</option>
+                        <option value="Scaffolding">Scaffolding</option>
+                        <option value="Glazing">Glazing</option>
+                        <option value="Insulation">Insulation</option>
+                        <option value="Materials">Materials</option>
+                    </select>
+                    <div id="tradeRateInfo" class="rate-info"></div>
+                </div>
+                <div class="form-group">
+                    <label>Description *</label>
+                    <input type="text" id="description" placeholder="Describe the work">
+                </div>
+            </div>
+
+            <div class="form-grid">
+                <div class="form-group">
+                    <label>Quantity *</label>
+                    <input type="number" id="quantity" value="1" min="0.1" step="0.1">
+                </div>
+                <div class="form-group">
+                    <label>Rate Type</label>
+                    <div class="rate-type-selector">
+                        <button type="button" class="rate-type-btn" data-type="hourly">Hourly Rate</button>
+                        <button type="button" class="rate-type-btn" data-type="daily">Day Rate</button>
+                        <button type="button" class="rate-type-btn active" data-type="job">Per Job</button>
+                        <button type="button" class="rate-type-btn" data-type="custom">Custom</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="form-grid">
+                <div class="form-group">
+                    <label id="rateLabel">Unit Price (£) *</label>
+                    <input type="number" id="unitPrice" placeholder="Enter price or use standard rate" step="0.01" min="0">
+                </div>
+                <div class="form-group hidden" id="customUnitGroup">
+                    <label>Custom Unit Name</label>
+                    <input type="text" id="customUnit" placeholder="e.g., per sqm, per item">
+                </div>
+            </div>
+
+            <button class="btn btn-primary" onclick="addItem()">Add Item to Quote</button>
+        </div>
+
+        <div class="section" id="quoteSection" style="display: none;">
+            <h2 class="section-title">Quote Items</h2>
+            <div style="overflow-x: auto;">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Category</th>
+                            <th>Description</th>
+                            <th class="text-center">Qty</th>
+                            <th class="text-right">Unit Price</th>
+                            <th class="text-right">Total</th>
+                            <th class="text-center">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody id="quoteItems"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="section" id="notesSection">
+            <h2 class="section-title">Additional Notes (Optional)</h2>
+            <div class="form-group">
+                <label>Custom Notes</label>
+                <textarea id="customNotes" rows="4" placeholder="Add any additional notes or terms..."></textarea>
+            </div>
+        </div>
+
+        <div id="generateSection" style="display: none; margin-top: 20px; text-align: center;">
+            <button class="btn btn-success" onclick="previewQuote()">Preview Quote</button>
+            <button class="btn btn-secondary" onclick="downloadQuote()">Download PDF</button>
+        </div>
+    </div>
+
+    <!-- Preview Modal -->
+    <div id="previewModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <span class="close" onclick="closePreview()">&times;</span>
+                <h2>Quote Preview</h2>
+            </div>
+            <div class="modal-body" id="previewBody">
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-success" onclick="downloadQuote()">Download PDF</button>
+                <button class="btn btn-secondary" onclick="closePreview()">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
