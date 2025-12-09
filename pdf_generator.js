@@ -5,7 +5,6 @@ function downloadQuote() {
     var clientName = document.getElementById('clientName').value || '[Client Name]';
     var clientPhone = document.getElementById('clientPhone').value;
     var projectAddress = document.getElementById('projectAddress').value || '[Project Address]';
-    var projectName = document.getElementById('projectName').value || '[Project Name]';
     var customerId = document.getElementById('customerId').value || 'N/A';
     var depositPercent = document.getElementById('depositPercent').value || '30';
     
@@ -72,8 +71,6 @@ function downloadQuote() {
     doc.setTextColor(darkGray[0], darkGray[1], darkGray[2]);
     doc.setFontSize(9);
     var yPos = 73;
-    doc.text(projectName, 15, yPos);
-    yPos += 4;
     var addressLines = doc.splitTextToSize(projectAddress, 70);
     doc.text(addressLines, 15, yPos);
     yPos += (addressLines.length * 4);
