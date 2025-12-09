@@ -380,32 +380,38 @@ function downloadQuote() {
     var { jsPDF } = window.jspdf;
     var doc = new jsPDF();
     
-    // Header - Company info and logo
+    // Colors
+    var goldColor = [188, 156, 34];
+    var darkGray = [51, 51, 51];
+    var mediumGray = [102, 102, 102];
+    var lightGray = [245, 245, 245];
+    
+    // Header - Company name
     doc.setFontSize(24);
     doc.setFont(undefined, 'bold');
-    doc.setTextColor(51, 51, 51);
+    doc.setTextColor(darkGray[0], darkGray[1], darkGray[2]);
     doc.text('TRADER BROTHERS LTD', 15, 20);
     
     // Company details
     doc.setFontSize(9);
     doc.setFont(undefined, 'normal');
-    doc.setTextColor(102, 102, 102);
+    doc.setTextColor(mediumGray[0], mediumGray[1], mediumGray[2]);
     doc.text('8 Craigour Terrace', 15, 27);
     doc.text('Edinburgh, EH17 7PB', 15, 31);
     doc.text('07979309957', 15, 35);
     doc.text('traderbrotherslimited@gmail.com', 15, 39);
     
-    // Logo on right
-    doc.setFillColor(188, 156, 34);
+    // Logo placeholder on right (gold box)
+    doc.setFillColor(goldColor[0], goldColor[1], goldColor[2]);
     doc.rect(170, 10, 25, 25, 'F');
     
     // Line under header
-    doc.setDrawColor(51, 51, 51);
+    doc.setDrawColor(darkGray[0], darkGray[1], darkGray[2]);
     doc.setLineWidth(0.5);
     doc.line(15, 45, 195, 45);
     
     // Estimate banner
-    doc.setFillColor(188, 156, 34);
+    doc.setFillColor(goldColor[0], goldColor[1], goldColor[2]);
     doc.rect(15, 52, 50, 8, 'F');
     doc.setTextColor(255, 255, 255);
     doc.setFontSize(11);
@@ -413,13 +419,13 @@ function downloadQuote() {
     doc.text('Estimate for', 18, 57.5);
     
     // Client info
-    doc.setTextColor(102, 102, 102);
+    doc.setTextColor(mediumGray[0], mediumGray[1], mediumGray[2]);
     doc.setFontSize(10);
     doc.setFont(undefined, 'bold');
     doc.text(clientName, 15, 68);
     
     doc.setFont(undefined, 'normal');
-    doc.setTextColor(51, 51, 51);
+    doc.setTextColor(darkGray[0], darkGray[1], darkGray[2]);
     doc.setFontSize(9);
     var yPos = 73;
     doc.text(projectName, 15, yPos);
@@ -432,58 +438,69 @@ function downloadQuote() {
     }
     
     // Estimate details table on right
-    doc.setTextColor(102, 102, 102);
+    doc.setTextColor(mediumGray[0], mediumGray[1], mediumGray[2]);
     doc.setFontSize(9);
+    doc.setFont(undefined, 'normal');
     var rightY = 68;
-    doc.text('Date:', 130, rightY);
+    var labelX = 130;
+    var valueX = 193;
+    
+    doc.text('Date:', labelX, rightY);
     doc.setFont(undefined, 'bold');
-    doc.setTextColor(51, 51, 51);
-    doc.text(quoteDate, 180, rightY, { align: 'right' });
+    doc.setTextColor(darkGray[0], darkGray[1], darkGray[2]);
+    doc.text(quoteDate, valueX, rightY, { align: 'right' });
     
     rightY += 5;
     doc.setFont(undefined, 'normal');
-    doc.setTextColor(102, 102, 102);
-    doc.text('Estimate #:', 130, rightY);
+    doc.setTextColor(mediumGray[0], mediumGray[1], mediumGray[2]);
+    doc.text('Estimate #:', labelX, rightY);
     doc.setFont(undefined, 'bold');
-    doc.setTextColor(51, 51, 51);
-    doc.text(estNumber, 180, rightY, { align: 'right' });
+    doc.setTextColor(darkGray[0], darkGray[1], darkGray[2]);
+    doc.text(estNumber, valueX, rightY, { align: 'right' });
     
     rightY += 5;
     doc.setFont(undefined, 'normal');
-    doc.setTextColor(102, 102, 102);
-    doc.text('Customer Ref:', 130, rightY);
+    doc.setTextColor(mediumGray[0], mediumGray[1], mediumGray[2]);
+    doc.text('Customer Ref:', labelX, rightY);
     doc.setFont(undefined, 'bold');
-    doc.setTextColor(51, 51, 51);
-    doc.text(customerId, 180, rightY, { align: 'right' });
+    doc.setTextColor(darkGray[0], darkGray[1], darkGray[2]);
+    doc.text(customerId, valueX, rightY, { align: 'right' });
     
     rightY += 5;
     doc.setFont(undefined, 'normal');
-    doc.setTextColor(102, 102, 102);
-    doc.text('Expiry Date:', 130, rightY);
-    doc.setFillColor(188, 156, 34);
-    doc.rect(155, rightY - 3, 25, 5, 'F');
+    doc.setTextColor(mediumGray[0], mediumGray[1], mediumGray[2]);
+    doc.text('Expiry Date:', labelX, rightY);
+    // Gold box for expiry date
+    doc.setFillColor(goldColor[0], goldColor[1], goldColor[2]);
+    var expiryBoxWidth = doc.getTextWidth(expiryDate) + 6;
+    doc.rect(valueX - expiryBoxWidth, rightY - 3.5, expiryBoxWidth, 5.5, 'F');
     doc.setTextColor(255, 255, 255);
     doc.setFont(undefined, 'bold');
-    doc.text(expiryDate, 167.5, rightY, { align: 'center' });
+    doc.text(expiryDate, valueX - 3, rightY, { align: 'right' });
     
     // Items table
     yPos = Math.max(yPos, rightY) + 15;
     
     // Table header
-    doc.setFillColor(245, 245, 245);
+    doc.setFillColor(lightGray[0], lightGray[1], lightGray[2]);
     doc.rect(15, yPos - 4, 180, 7, 'F');
-    doc.setTextColor(51, 51, 51);
+    doc.setTextColor(darkGray[0], darkGray[1], darkGray[2]);
     doc.setFont(undefined, 'bold');
     doc.setFontSize(9);
     doc.text('Description', 17, yPos);
-    doc.text('Qty', 135, yPos, { align: 'right' });
-    doc.text('Unit price', 160, yPos, { align: 'right' });
+    doc.text('Qty', 140, yPos, { align: 'right' });
+    doc.text('Unit price', 165, yPos, { align: 'right' });
     doc.text('Total price', 193, yPos, { align: 'right' });
+    
+    // Bottom border of header
+    doc.setDrawColor(221, 221, 221);
+    doc.setLineWidth(0.5);
+    doc.line(15, yPos + 2, 195, yPos + 2);
     
     yPos += 8;
     doc.setFont(undefined, 'normal');
     doc.setFontSize(9);
-    doc.setTextColor(51, 51, 51);
+    doc.setTextColor(darkGray[0], darkGray[1], darkGray[2]);
     
     // Table items
     for (var i = 0; i < items.length; i++) {
@@ -494,10 +511,10 @@ function downloadQuote() {
             yPos = 20;
         }
         
-        var descLines = doc.splitTextToSize(item.description, 110);
+        var descLines = doc.splitTextToSize(item.description, 115);
         doc.text(descLines, 17, yPos);
-        doc.text(String(item.quantity), 135, yPos, { align: 'right' });
-        doc.text('£' + item.unitPrice.toFixed(2), 160, yPos, { align: 'right' });
+        doc.text(String(item.quantity), 140, yPos, { align: 'right' });
+        doc.text('£' + item.unitPrice.toFixed(2), 165, yPos, { align: 'right' });
         doc.text('£' + item.lineTotal.toFixed(2), 193, yPos, { align: 'right' });
         yPos += (descLines.length * 4) + 2;
         
@@ -515,81 +532,86 @@ function downloadQuote() {
     
     // Notes section
     doc.setFillColor(249, 249, 249);
-    doc.rect(15, yPos, 180, 30, 'F');
-    doc.setDrawColor(188, 156, 34);
-    doc.setLineWidth(1);
-    doc.line(15, yPos, 15, yPos + 30);
+    doc.rect(15, yPos, 180, 35, 'F');
+    doc.setDrawColor(goldColor[0], goldColor[1], goldColor[2]);
+    doc.setLineWidth(2);
+    doc.line(15, yPos, 15, yPos + 35);
     
-    doc.setTextColor(51, 51, 51);
+    doc.setTextColor(darkGray[0], darkGray[1], darkGray[2]);
     doc.setFont(undefined, 'bold');
     doc.setFontSize(9);
-    doc.text('Notes:', 20, yPos + 5);
+    doc.text('Notes:', 20, yPos + 6);
     
     doc.setFont(undefined, 'normal');
-    doc.setTextColor(102, 102, 102);
+    doc.setTextColor(mediumGray[0], mediumGray[1], mediumGray[2]);
     doc.setFontSize(8);
-    var notesY = yPos + 10;
-    doc.text('1. Estimate valid for 31 days', 20, notesY);
-    notesY += 4;
-    doc.text('2. Payment of ' + depositPercent + '% is required to secure start date', 20, notesY);
-    notesY += 4;
-    doc.text('3. Pending to be supplied by customer', 20, notesY);
-    notesY += 4;
-    doc.text('4. Any extras to be charged accordingly', 20, notesY);
+    var notesY = yPos + 12;
+    doc.text('1. Estimate valid for 31 days', 23, notesY);
+    notesY += 4.5;
+    doc.text('2. Payment of ' + depositPercent + '% is required to secure start date', 23, notesY);
+    notesY += 4.5;
+    doc.text('3. Pending to be supplied by customer', 23, notesY);
+    notesY += 4.5;
+    doc.text('4. Any extras to be charged accordingly', 23, notesY);
     
     var customNotes = document.getElementById('customNotes').value;
     if (customNotes) {
-        notesY += 4;
-        var noteLines = doc.splitTextToSize('5. ' + customNotes, 170);
-        doc.text(noteLines, 20, notesY);
+        notesY += 4.5;
+        var noteLines = doc.splitTextToSize('5. ' + customNotes, 165);
+        doc.text(noteLines, 23, notesY);
     }
     
-    yPos += 40;
+    yPos += 45;
     
     // Totals section
-    doc.setTextColor(51, 51, 51);
+    var totalsX = 130;
+    var totalsValueX = 193;
+    
+    // Subtotal
+    doc.setTextColor(darkGray[0], darkGray[1], darkGray[2]);
     doc.setFont(undefined, 'normal');
     doc.setFontSize(9);
     doc.setDrawColor(221, 221, 221);
     doc.setLineWidth(0.3);
-    doc.line(130, yPos, 195, yPos);
+    doc.line(totalsX, yPos, 195, yPos);
     yPos += 5;
     
-    doc.text('Subtotal', 130, yPos);
-    doc.text('£' + subtotal.toFixed(2), 193, yPos, { align: 'right' });
+    doc.text('Subtotal', totalsX, yPos);
+    doc.text('£' + subtotal.toFixed(2), totalsValueX, yPos, { align: 'right' });
     yPos += 5;
     
-    doc.setTextColor(102, 102, 102);
-    doc.text('VAT', 130, yPos);
-    doc.text('£' + vat.toFixed(2), 193, yPos, { align: 'right' });
+    // VAT
+    doc.setTextColor(mediumGray[0], mediumGray[1], mediumGray[2]);
+    doc.text('VAT', totalsX, yPos);
+    doc.text('£' + vat.toFixed(2), totalsValueX, yPos, { align: 'right' });
     yPos += 7;
     
-    // Final total with gradient background
-    doc.setFillColor(188, 156, 34);
-    doc.rect(130, yPos - 5, 65, 8, 'F');
+    // Final total with gold background
+    doc.setFillColor(goldColor[0], goldColor[1], goldColor[2]);
+    doc.rect(totalsX, yPos - 5, 65, 9, 'F');
     doc.setTextColor(255, 255, 255);
     doc.setFont(undefined, 'bold');
-    doc.setFontSize(11);
-    doc.text('Total', 135, yPos);
-    doc.text('£' + total.toFixed(2), 188, yPos, { align: 'right' });
+    doc.setFontSize(12);
+    doc.text('Total', totalsX + 5, yPos);
+    doc.text('£' + total.toFixed(2), totalsValueX - 5, yPos, { align: 'right' });
     
     // Footer
-    doc.setTextColor(102, 102, 102);
+    doc.setTextColor(mediumGray[0], mediumGray[1], mediumGray[2]);
     doc.setFont(undefined, 'italic');
-    doc.setFontSize(7);
-    doc.text('If you have any questions about this estimate, please contact', 105, 275, { align: 'center' });
-    doc.text('Trader Brothers on 07448835577', 105, 279, { align: 'center' });
+    doc.setFontSize(8);
+    doc.text('If you have any questions about this estimate, please contact', 105, 273, { align: 'center' });
+    doc.text('Trader Brothers on 07448835577', 105, 278, { align: 'center' });
     
     doc.setFont(undefined, 'bold');
-    doc.setTextColor(51, 51, 51);
-    doc.setFontSize(8);
+    doc.setTextColor(darkGray[0], darkGray[1], darkGray[2]);
+    doc.setFontSize(9);
     doc.text('Thank you for your business', 105, 285, { align: 'center' });
     
     localStorage.setItem('traderBrosEstimateCount', estimateNumber);
     estimateNumber++;
     updateEstimateCounter();
     
-    var filename = 'Estimate_' + estNumber + '_' + projectAddress.substring(0, 30).replace(/[^a-zA-Z0-9]/g, '_') + '.pdf';
+    var filename = 'Estimate_' + estNumber + '_' + clientName.substring(0, 20).replace(/[^a-zA-Z0-9]/g, '_') + '.pdf';
     doc.save(filename);
     
     closePreview();
