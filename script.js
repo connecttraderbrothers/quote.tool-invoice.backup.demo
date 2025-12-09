@@ -243,7 +243,6 @@ function updateQuoteTable() {
 function previewQuote() {
     var clientName = document.getElementById('clientName').value || '[Client Name]';
     var clientPhone = document.getElementById('clientPhone').value;
-    var projectName = document.getElementById('projectName').value || '[Project Name]';
     var projectAddress = document.getElementById('projectAddress').value || '[Project Address]';
     var customerId = document.getElementById('customerId').value || 'N/A';
     var depositPercent = document.getElementById('depositPercent').value || '30';
@@ -284,7 +283,6 @@ function previewQuote() {
     previewHtml += '<div class="client-info">';
     previewHtml += '<h3>' + clientName + '</h3>';
     previewHtml += '<p>';
-    previewHtml += projectName + '<br>';
     previewHtml += projectAddress;
     if (clientPhone) previewHtml += '<br>' + clientPhone;
     previewHtml += '</p></div>';
@@ -343,7 +341,7 @@ function previewQuote() {
     // Footer note
     previewHtml += '<div class="footer-note">';
     previewHtml += 'If you have any questions about this estimate, please contact<br>';
-    previewHtml += 'Trader Brothers on 07979309957';
+    previewHtml += 'Trader Brothers on 07448835577';
     previewHtml += '<div class="thank-you">Thank you for your business</div>';
     previewHtml += '</div>';
 
