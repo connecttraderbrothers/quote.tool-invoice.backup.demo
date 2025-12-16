@@ -7,14 +7,11 @@
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#fbbf24">
     <link rel="stylesheet" href="styles.css">
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 </head>
 <body>
     <div class="container">
         <div class="header">
-            <div class="logo">
-                <img src="https://github.com/infotraderbrothers-lgtm/traderbrothers-assets-logo/blob/main/Trader%20Brothers.png?raw=true" alt="TB Logo">
-            </div>
+            <div class="logo">TB</div>
             <div class="header-text">
                 <h1>TRADER BROTHERS LTD</h1>
                 <p>Professional Quotation Tool</p>
@@ -35,6 +32,10 @@
                 <div class="form-group">
                     <label>Client Phone</label>
                     <input type="text" id="clientPhone" placeholder="Enter phone number">
+                </div>
+                <div class="form-group">
+                    <label>Project Name</label>
+                    <input type="text" id="projectName" placeholder="Enter project name">
                 </div>
                 <div class="form-group">
                     <label>Project Address *</label>
@@ -154,7 +155,6 @@
         </div>
     </div>
 
-    <!-- Preview Modal -->
     <div id="previewModal" class="modal">
         <div class="modal-content">
             <div class="modal-header">
@@ -170,7 +170,7 @@
         </div>
     </div>
 
-    <script src="script.js"></script>
     <script src="pdf_generator.js"></script>
+    <script src="script.js"></script>
 </body>
 </html>
