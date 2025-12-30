@@ -12,7 +12,7 @@ var tradeRates = {
     'Electricals': { hourly: 60, daily: 500, job: 700 },
     'Plumbing': { hourly: 55, daily: 450, job: 600 },
     'Gas work/Plumbing': { hourly: 60, daily: 500, job: 900 },
-    'Plastering': { hourly: 35, daily: 300, job:  },
+    'Plastering': { hourly: 35, daily: 300, job: 0 },
     'Skimming /Painting': { hourly: 30, daily: 250, job: 1000 },
     'Painting & Decorating': { hourly: 28, daily: 220, job: 750 },
     'Tiling': { hourly: 32, daily: 300, job: 1000 },
