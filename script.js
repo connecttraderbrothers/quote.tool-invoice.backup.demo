@@ -269,7 +269,7 @@ function previewQuote() {
       * { margin: 0; padding: 0; box-sizing: border-box; }
       body { font-family: Arial, sans-serif; background: #f5f5f5; }
       .estimate-container { max-width: 800px; margin: 0 auto; background: white; padding: 40px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
-      .header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 30px; padding: 20px 0; border-bottom: 2px solid #e0e0e0; background: white; }
+      .header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 30px; padding: 20px; border-bottom: 2px solid #e0e0e0; background: white; }
       .company-info { flex: 1; }
       .company-name { font-size: 24px; font-weight: bold; margin-bottom: 10px; color: #333; }
       .company-name .highlight { background: linear-gradient(135deg, #bc9c22, #d4af37); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
