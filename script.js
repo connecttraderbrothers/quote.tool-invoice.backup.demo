@@ -284,7 +284,7 @@ function previewQuote() {
       .info-value { color: #333; font-weight: normal; }
       .expiry-date { background: linear-gradient(135deg, #bc9c22, #d4af37); padding: 5px 10px; display: inline-block; color: white; font-weight: normal; }
       .items-table { width: 100%; border-collapse: collapse; margin: 30px 0; }
-      .items-table thead { background: #e0e0e0; }
+      .items-table thead { background: #f0f0f0; }
       .items-table th { padding: 12px; text-align: left; font-size: 12px; font-weight: bold; color: #333; border-bottom: 2px solid #ddd; }
       .items-table th:nth-child(2), .items-table th:nth-child(3), .items-table th:nth-child(4) { text-align: right; width: 100px; }
       .items-table td { padding: 12px; font-size: 13px; border-bottom: 1px solid #eee; color: #333; }
