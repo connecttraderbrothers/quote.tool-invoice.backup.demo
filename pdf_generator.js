@@ -230,10 +230,10 @@ function generateCompleteHTML() {
         <div class="company-info">
           <div class="company-name">TR<span class="highlight">A</span>DER BROTHERS LTD</div>
           <div class="company-details">
-            45 Riverside Business Park<br>
-            London, SW18 4UQ<br>
-            020 7946 0958<br>
-            info@traderbrothers.co.uk
+            8 Craigour Terrace<br>
+            Edinburgh, EH17 7PB<br>
+            07931 810557<br>
+            traderbrotherslimited@gmail.com
           </div>
         </div>
         <div class="logo-container">
