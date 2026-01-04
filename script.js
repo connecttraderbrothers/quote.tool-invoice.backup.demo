@@ -1,6 +1,7 @@
 var items = [];
 var currentRateType = 'job';
 var estimateNumber = 1;
+var editingIndex = -1;
 
 // Edinburgh 2025 standard trade rates
 var tradeRates = {
@@ -168,27 +169,104 @@ function addItem() {
 
     var lineTotal = unitPrice * quantity;
 
-    items.push({
-        category: category,
-        description: description,
-        quantity: quantity,
-        unit: unit,
-        unitPrice: unitPrice,
-        lineTotal: lineTotal
-    });
+    if (editingIndex >= 0) {
+        // Update existing item
+        items[editingIndex] = {
+            category: category,
+            description: description,
+            quantity: quantity,
+            unit: unit,
+            unitPrice: unitPrice,
+            lineTotal: lineTotal
+        };
+        editingIndex = -1;
+        document.querySelector('.btn-primary').textContent = 'Add Item to Quote';
+    } else {
+        // Add new item
+        items.push({
+            category: category,
+            description: description,
+            quantity: quantity,
+            unit: unit,
+            unitPrice: unitPrice,
+            lineTotal: lineTotal
+        });
+    }
 
     updateQuoteTable();
-    
+    clearForm();
+}
+
+function clearForm() {
     document.getElementById('description').value = '';
     document.getElementById('quantity').value = '1';
     document.getElementById('unitPrice').value = '';
     document.getElementById('customUnit').value = '';
     document.getElementById('tradeCategory').selectedIndex = 0;
     document.getElementById('tradeRateInfo').textContent = '';
+    editingIndex = -1;
+    document.querySelector('.btn-primary').textContent = 'Add Item to Quote';
+}
+
+function editItem(index) {
+    var item = items[index];
+    editingIndex = index;
+    
+    document.getElementById('tradeCategory').value = item.category;
+    document.getElementById('description').value = item.description;
+    document.getElementById('quantity').value = item.quantity;
+    document.getElementById('unitPrice').value = item.unitPrice;
+    
+    // Set the rate type based on unit
+    if (item.unit === 'hour') {
+        document.querySelector('[data-type="hourly"]').click();
+    } else if (item.unit === 'day') {
+        document.querySelector('[data-type="daily"]').click();
+    } else if (item.unit === 'job') {
+        document.querySelector('[data-type="job"]').click();
+    } else {
+        document.querySelector('[data-type="custom"]').click();
+        document.getElementById('customUnit').value = item.unit;
+    }
+    
+    document.querySelector('.btn-primary').textContent = 'Update Item';
+    
+    // Scroll to form
+    document.querySelector('.section h2').scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
 function removeItem(index) {
-    items.splice(index, 1);
+    if (confirm('Are you sure you want to delete this item?')) {
+        items.splice(index, 1);
+        updateQuoteTable();
+    }
+}
+
+function moveItem(index, direction) {
+    if (direction === 'up' && index > 0) {
+        var temp = items[index];
+        items[index] = items[index - 1];
+        items[index - 1] = temp;
+    } else if (direction === 'down' && index < items.length - 1) {
+        var temp = items[index];
+        items[index] = items[index + 1];
+        items[index + 1] = temp;
+    }
+    updateQuoteTable();
+}
+
+function repositionItem(index) {
+    var newPosition = prompt('Enter new position (1 to ' + items.length + '):', (index + 1));
+    if (newPosition === null) return;
+    
+    newPosition = parseInt(newPosition);
+    if (isNaN(newPosition) || newPosition < 1 || newPosition > items.length) {
+        alert('Invalid position. Please enter a number between 1 and ' + items.length);
+        return;
+    }
+    
+    var item = items.splice(index, 1)[0];
+    items.splice(newPosition - 1, 0, item);
     updateQuoteTable();
 }
 
@@ -215,7 +293,15 @@ function updateQuoteTable() {
         html += '<td class="text-center">' + item.quantity + '</td>';
         html += '<td class="text-right">£' + item.unitPrice.toFixed(2) + '</td>';
         html += '<td class="text-right" style="font-weight: 600;">£' + item.lineTotal.toFixed(2) + '</td>';
-        html += '<td class="text-center"><button class="btn-delete" onclick="removeItem(' + i + ')">Delete</button></td>';
+        html += '<td class="text-center">';
+        html += '<div style="display: flex; gap: 5px; justify-content: center; flex-wrap: wrap;">';
+        html += '<button class="btn-action btn-edit" onclick="editItem(' + i + ')" title="Edit">Edit</button>';
+        html += '<button class="btn-action btn-move" onclick="moveItem(' + i + ', \'up\')" title="Move Up" ' + (i === 0 ? 'disabled' : '') + '>↑</button>';
+        html += '<button class="btn-action btn-move" onclick="moveItem(' + i + ', \'down\')" title="Move Down" ' + (i === items.length - 1 ? 'disabled' : '') + '>↓</button>';
+        html += '<button class="btn-action btn-reposition" onclick="repositionItem(' + i + ')" title="Move to Position">#</button>';
+        html += '<button class="btn-action btn-delete" onclick="removeItem(' + i + ')" title="Delete">Del</button>';
+        html += '</div>';
+        html += '</td>';
         html += '</tr>';
     }
 
