@@ -169,29 +169,14 @@ function addItem() {
 
     var lineTotal = unitPrice * quantity;
 
-    if (editingIndex >= 0) {
-        // Update existing item
-        items[editingIndex] = {
-            category: category,
-            description: description,
-            quantity: quantity,
-            unit: unit,
-            unitPrice: unitPrice,
-            lineTotal: lineTotal
-        };
-        editingIndex = -1;
-        document.querySelector('.btn-primary').textContent = 'Add Item to Quote';
-    } else {
-        // Add new item
-        items.push({
-            category: category,
-            description: description,
-            quantity: quantity,
-            unit: unit,
-            unitPrice: unitPrice,
-            lineTotal: lineTotal
-        });
-    }
+    items.push({
+        category: category,
+        description: description,
+        quantity: quantity,
+        unit: unit,
+        unitPrice: unitPrice,
+        lineTotal: lineTotal
+    });
 
     updateQuoteTable();
     clearForm();
@@ -204,45 +189,115 @@ function clearForm() {
     document.getElementById('customUnit').value = '';
     document.getElementById('tradeCategory').selectedIndex = 0;
     document.getElementById('tradeRateInfo').textContent = '';
-    editingIndex = -1;
-    document.querySelector('.btn-primary').textContent = 'Add Item to Quote';
 }
 
 function editItem(index) {
-    var item = items[index];
-    editingIndex = index;
-    
-    document.getElementById('tradeCategory').value = item.category;
-    document.getElementById('description').value = item.description;
-    document.getElementById('quantity').value = item.quantity;
-    document.getElementById('unitPrice').value = item.unitPrice;
-    
-    // Set the rate type based on unit
-    if (item.unit === 'hour') {
-        document.querySelector('[data-type="hourly"]').click();
-    } else if (item.unit === 'day') {
-        document.querySelector('[data-type="daily"]').click();
-    } else if (item.unit === 'job') {
-        document.querySelector('[data-type="job"]').click();
-    } else {
-        document.querySelector('[data-type="custom"]').click();
-        document.getElementById('customUnit').value = item.unit;
+    // Cancel any existing edit
+    if (editingIndex >= 0) {
+        cancelEdit();
     }
     
-    document.querySelector('.btn-primary').textContent = 'Update Item';
+    editingIndex = index;
+    var item = items[index];
     
-    // Scroll to form
-    document.querySelector('.section h2').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    // Build select options for category
+    var categoryOptions = '';
+    var categories = Object.keys(tradeRates);
+    categories.unshift('General');
+    for (var i = 0; i < categories.length; i++) {
+        var selected = categories[i] === item.category ? 'selected' : '';
+        categoryOptions += '<option value="' + categories[i] + '" ' + selected + '>' + categories[i] + '</option>';
+    }
+    
+    var row = document.getElementById('quoteItems').rows[index];
+    row.classList.add('editing-row');
+    row.innerHTML = `
+        <td>
+            <select class="inline-edit-input" id="edit-category-${index}" style="width: 100%;">
+                ${categoryOptions}
+            </select>
+        </td>
+        <td>
+            <input type="text" class="inline-edit-input" id="edit-description-${index}" value="${item.description}" style="width: 100%;">
+        </td>
+        <td class="text-center">
+            <input type="number" class="inline-edit-input" id="edit-quantity-${index}" value="${item.quantity}" step="0.1" min="0.1" style="width: 80px;">
+        </td>
+        <td class="text-right">
+            <input type="number" class="inline-edit-input" id="edit-price-${index}" value="${item.unitPrice}" step="0.01" min="0" style="width: 100px;">
+        </td>
+        <td class="text-right" style="font-weight: 600;">£${item.lineTotal.toFixed(2)}</td>
+        <td class="text-center">
+            <div style="display: flex; gap: 5px; justify-content: center; flex-wrap: wrap;">
+                <button class="btn-action btn-save" onclick="saveEdit(${index})" title="Save">Save</button>
+                <button class="btn-action btn-cancel" onclick="cancelEdit()" title="Cancel">Cancel</button>
+            </div>
+        </td>
+    `;
+    
+    // Auto-update total when quantity or price changes
+    document.getElementById('edit-quantity-' + index).addEventListener('input', function() {
+        updateEditTotal(index);
+    });
+    document.getElementById('edit-price-' + index).addEventListener('input', function() {
+        updateEditTotal(index);
+    });
+}
+
+function updateEditTotal(index) {
+    var quantity = parseFloat(document.getElementById('edit-quantity-' + index).value) || 0;
+    var price = parseFloat(document.getElementById('edit-price-' + index).value) || 0;
+    var total = quantity * price;
+    
+    var row = document.getElementById('quoteItems').rows[index];
+    row.cells[4].textContent = '£' + total.toFixed(2);
+}
+
+function saveEdit(index) {
+    var category = document.getElementById('edit-category-' + index).value;
+    var description = document.getElementById('edit-description-' + index).value;
+    var quantity = parseFloat(document.getElementById('edit-quantity-' + index).value);
+    var unitPrice = parseFloat(document.getElementById('edit-price-' + index).value);
+    
+    if (!description || !unitPrice || !quantity) {
+        alert('Please fill in all fields');
+        return;
+    }
+    
+    var lineTotal = unitPrice * quantity;
+    
+    items[index] = {
+        category: category,
+        description: description,
+        quantity: quantity,
+        unit: items[index].unit,
+        unitPrice: unitPrice,
+        lineTotal: lineTotal
+    };
+    
+    editingIndex = -1;
+    updateQuoteTable();
+}
+
+function cancelEdit() {
+    editingIndex = -1;
+    updateQuoteTable();
 }
 
 function removeItem(index) {
     if (confirm('Are you sure you want to delete this item?')) {
         items.splice(index, 1);
+        editingIndex = -1;
         updateQuoteTable();
     }
 }
 
 function moveItem(index, direction) {
+    if (editingIndex >= 0) {
+        alert('Please save or cancel your current edit first');
+        return;
+    }
+    
     if (direction === 'up' && index > 0) {
         var temp = items[index];
         items[index] = items[index - 1];
@@ -256,6 +311,11 @@ function moveItem(index, direction) {
 }
 
 function repositionItem(index) {
+    if (editingIndex >= 0) {
+        alert('Please save or cancel your current edit first');
+        return;
+    }
+    
     var newPosition = prompt('Enter new position (1 to ' + items.length + '):', (index + 1));
     if (newPosition === null) return;
     
@@ -333,6 +393,11 @@ function updateQuoteTable() {
 }
 
 function previewQuote() {
+    if (editingIndex >= 0) {
+        alert('Please save or cancel your current edit first');
+        return;
+    }
+    
     var clientName = document.getElementById('clientName').value || '[Client Name]';
     var clientPhone = document.getElementById('clientPhone').value;
     var projectAddress = document.getElementById('projectAddress').value || '[Project Address]';
