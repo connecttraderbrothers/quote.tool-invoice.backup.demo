@@ -475,31 +475,41 @@ function previewQuote() {
 
       <div class="info-section-preview">
         <div class="client-info-preview">
-          <h3>${clientName}</h3>
-          <p>
-            ${projectAddress}${clientPhone ? '<br>' + clientPhone : ''}
-          </p>
+          <div class="info-row-preview">
+            <span class="info-label-preview">Name:</span>
+            <span class="info-value-preview">${clientName}</span>
+          </div>
+          <div class="info-row-preview">
+            <span class="info-label-preview">Address:</span>
+            <span class="info-value-preview">${projectAddress}</span>
+          </div>
+          <div class="info-row-preview">
+            <span class="info-label-preview">Postcode:</span>
+            <span class="info-value-preview">${document.getElementById('projectPostcode').value || 'N/A'}</span>
+          </div>
+          <div class="info-row-preview">
+            <span class="info-label-preview">Phone:</span>
+            <span class="info-value-preview">${clientPhone || 'N/A'}</span>
+          </div>
         </div>
 
         <div class="estimate-details-preview">
-          <table class="details-table-preview">
-            <tr>
-              <td class="detail-label-preview">Date:</td>
-              <td class="detail-value-preview">${quoteDate}</td>
-            </tr>
-            <tr>
-              <td class="detail-label-preview">Estimate #:</td>
-              <td class="detail-value-preview">${estNumber}</td>
-            </tr>
-            <tr>
-              <td class="detail-label-preview">Customer Ref:</td>
-              <td class="detail-value-preview">${customerId}</td>
-            </tr>
-            <tr>
-              <td class="detail-label-preview">Expiry Date:</td>
-              <td><span class="expiry-date-preview">${expiryDate}</span></td>
-            </tr>
-          </table>
+          <div class="info-row-preview">
+            <span class="info-label-preview">Date:</span>
+            <span class="info-value-preview">${quoteDate}</span>
+          </div>
+          <div class="info-row-preview">
+            <span class="info-label-preview">Estimate #:</span>
+            <span class="info-value-preview">${estNumber}</span>
+          </div>
+          <div class="info-row-preview">
+            <span class="info-label-preview">Customer ID:</span>
+            <span class="info-value-preview">${customerId}</span>
+          </div>
+          <div class="info-row-preview">
+            <span class="info-label-preview">Expiry Date:</span>
+            <span class="expiry-date-preview">${expiryDate}</span>
+          </div>
         </div>
       </div>
 
