@@ -427,16 +427,13 @@ function previewQuote() {
       .company-details-preview { font-size: 11px; line-height: 1.6; color: #666; }
       .logo-preview { width: 120px; height: auto; }
       .estimate-banner-preview { background: linear-gradient(135deg, #bc9c22, #d4af37); padding: 15px 20px; margin-bottom: 25px; display: inline-block; font-weight: bold; font-size: 16px; color: white; }
-      .info-section-preview { display: flex; justify-content: space-between; margin-bottom: 30px; }
-      .client-info-preview { flex: 1; }
-      .client-info-preview h3 { font-size: 12px; color: #666; margin-bottom: 8px; }
-      .client-info-preview p { font-size: 13px; line-height: 1.5; color: #333; }
-      .estimate-details-preview { flex: 0 0 250px; }
-      .details-table-preview { width: 100%; border-collapse: collapse; }
-      .details-table-preview td { padding: 8px 10px; font-size: 13px; }
-      .detail-label-preview { color: #666; text-align: left; width: 120px; }
-      .detail-value-preview { font-weight: bold; color: #333; text-align: left; }
-      .expiry-date-preview { background: linear-gradient(135deg, #bc9c22, #d4af37); padding: 5px 10px; display: inline-block; color: white; font-weight: bold; }
+      .info-section-preview { display: flex; justify-content: space-between; margin-bottom: 30px; align-items: flex-start; gap: 100px; }
+      .client-info-preview { flex: 0 0 auto; }
+      .estimate-details-preview { flex: 0 0 auto; }
+      .info-row-preview { font-size: 13px; line-height: 2; display: flex; align-items: center; }
+      .info-label-preview { color: #333; font-weight: bold; margin-right: 10px; min-width: 80px; }
+      .info-value-preview { color: #333; font-weight: normal; }
+      .expiry-date-preview { background: linear-gradient(135deg, #bc9c22, #d4af37); padding: 5px 10px; display: inline-block; color: white; font-weight: normal; }
       .items-table-preview { width: 100%; border-collapse: collapse; margin: 30px 0; }
       .items-table-preview thead { background: #f5f5f5; }
       .items-table-preview th { padding: 12px; text-align: left; font-size: 12px; font-weight: bold; color: #333; border-bottom: 2px solid #ddd; }
