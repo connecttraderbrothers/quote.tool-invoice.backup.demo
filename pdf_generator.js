@@ -10,6 +10,7 @@ function generateCompleteHTML() {
     var projectPostcode = document.getElementById('projectPostcode').value;
     var customerId = document.getElementById('customerId').value || 'N/A';
     var depositPercent = document.getElementById('depositPercent').value || '30';
+    var customNotes = document.getElementById('customNotes').value.trim();
     
     var today = new Date();
     var quoteDate = today.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }).replace(/ /g, ' ');
@@ -340,8 +341,9 @@ function generateCompleteHTML() {
           <li>Payment of ${depositPercent}% is required to secure start date</li>
           <li>Parking to be supplied by customer</li>
           <li>Any additional work to be charged accordingly</li>
-        </ol>
-      </div>
+       </ol>
+       ${customNotes ? '<div style="margin-top: 15px;"><strong>Additional Notes:</strong><br>' + customNotes.replace(/\n/g, '<br>') + '</div>' : ''}
+     </div>
 
       <div class="totals-section">
         <div class="totals-box">
