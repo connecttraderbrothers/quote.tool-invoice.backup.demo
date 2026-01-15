@@ -63,13 +63,13 @@
                     </ul>
                 </div>
 
-                <div class="tool-card disabled">
+                <div class="tool-card active" onclick="showInvoiceTool()">
                     <div class="tool-icon">📊</div>
                     <div class="tool-title">Invoice Manager</div>
                     <div class="tool-description">
                         Manage invoices, track payments, and maintain client records all in one place.
                     </div>
-                    <span class="tool-status status-coming-soon">Coming Soon</span>
+                    <span class="tool-status status-active">Active</span>
                     <ul class="tool-features">
                         <li>Invoice generation</li>
                         <li>Payment tracking</li>
@@ -176,20 +176,20 @@
                         <input type="text" id="clientPhone" placeholder="Enter phone number">
                     </div>
                     <div class="form-group">
+                        <label>Client Email</label>
+                        <input type="email" id="clientEmail" placeholder="Enter email address">
+                    </div>
+                    <div class="form-group">
                         <label>Project Address *</label>
                         <input type="text" id="projectAddress" placeholder="Enter full address">
                     </div>
                    <div class="form-group">
                         <label>Project Postcode</label>
-                        <input type="text" id="projectPostcode" placeholder="Enter postcode ">
+                        <input type="text" id="projectPostcode" placeholder="Enter postcode">
                     </div>
                     <div class="form-group">
                         <label>Customer ID (Auto-generated)</label>
                         <input type="text" id="customerId" placeholder="Auto-generated from name" disabled>
-                    </div>
-                    <div class="form-group">
-                        <label>Deposit Percentage</label>
-                        <input type="number" id="depositPercent" value="30" min="0" max="100">
                     </div>
                 </div>
             </div>
@@ -289,6 +289,10 @@
                     <label>Custom Notes</label>
                     <textarea id="customNotes" rows="4" placeholder="Add any additional notes or terms..."></textarea>
                 </div>
+                <div class="form-group">
+                    <label>Deposit Percentage</label>
+                    <input type="number" id="depositPercent" value="30" min="0" max="100">
+                </div>
             </div>
 
             <div id="generateSection" style="display: none; margin-top: 20px; text-align: center;">
@@ -313,6 +317,205 @@
         </div>
     </div>
 
+    <!-- INVOICE TOOL SCREEN -->
+    <div id="invoiceScreen" style="display: none;">
+        <div class="back-navigation">
+            <button class="back-btn" onclick="showDashboard()">
+                ← Back to Dashboard
+            </button>
+        </div>
+
+        <div class="container">
+            <div class="header">
+                <div class="logo-container">
+                    <img src="https://github.com/connecttraderbrothers/omega.app.icon/blob/main/icon-512x512.png?raw=true" alt="Omega Logo" class="logo">
+                </div>
+                <div class="header-text">
+                    <h1>OMEGA</h1>
+                    <p>Professional Invoice Tool</p>
+                </div>
+            </div>
+            
+            <div class="estimate-counter">
+                Next Invoice Number: <span id="invoiceCounter">#0001</span>
+            </div>
+
+            <div class="section">
+                <h2 class="section-title">Client Information</h2>
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label>Client Name *</label>
+                        <input type="text" id="invoiceClientName" placeholder="Enter full name (e.g., John Smith)">
+                    </div>
+                    <div class="form-group">
+                        <label>Client Phone</label>
+                        <input type="text" id="invoiceClientPhone" placeholder="Enter phone number">
+                    </div>
+                    <div class="form-group">
+                        <label>Client Email</label>
+                        <input type="email" id="invoiceClientEmail" placeholder="Enter email address">
+                    </div>
+                    <div class="form-group">
+                        <label>Project Address *</label>
+                        <input type="text" id="invoiceProjectAddress" placeholder="Enter full address">
+                    </div>
+                   <div class="form-group">
+                        <label>Project Postcode</label>
+                        <input type="text" id="invoiceProjectPostcode" placeholder="Enter postcode">
+                    </div>
+                    <div class="form-group">
+                        <label>Customer ID (Auto-generated)</label>
+                        <input type="text" id="invoiceCustomerId" placeholder="Auto-generated from name" disabled>
+                    </div>
+                </div>
+            </div>
+
+            <div class="section">
+                <h2 class="section-title">Payment Terms</h2>
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label>Payment Due (Days)</label>
+                        <input type="number" id="paymentDueDays" value="30" min="0" max="365">
+                    </div>
+                    <div class="form-group">
+                        <label>Payment Status</label>
+                        <select id="paymentStatus">
+                            <option value="unpaid">Unpaid</option>
+                            <option value="partial">Partially Paid</option>
+                            <option value="paid">Paid</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <div class="section">
+                <h2 class="section-title">Add Line Item</h2>
+                
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label>Trade Category</label>
+                        <select id="invoiceTradeCategory">
+                            <option value="">Select a trade...</option>
+                            <option value="Downtakings">Downtakings</option>
+                            <option value="General Building">General Building</option>
+                            <option value="Building work">Building work</option>
+                            <option value="Carpentry">Carpentry</option>
+                            <option value="Joinery">Joinery</option>
+                            <option value="Electrical">Electricals</option>
+                            <option value="Plumbing">Plumbing</option>
+                            <option value="Gas work/Plumbing">Gas work/Plumbing</option>
+                            <option value="Plastering">Plastering</option>
+                            <option value="Skimming /Painting">Skimming /Painting</option>
+                            <option value="Painting & Decorating">Painting & Decorating</option>
+                            <option value="Tiling">Tiling</option>
+                            <option value="Roofing">Roofing</option>
+                            <option value="Kitchen Fitting">Kitchen Fitting</option>
+                            <option value="Bathroom Fitting">Bathrooms</option>
+                            <option value="Flooring">Flooring</option>
+                            <option value="Bricklaying">Bricklaying</option>
+                            <option value="HVAC">HVAC (Heating & Ventilation)</option>
+                            <option value="Groundworks">Groundworks</option>
+                            <option value="Scaffolding">Scaffolding</option>
+                            <option value="Glazing">Glazing</option>
+                            <option value="Insulation">Insulation</option>
+                            <option value="Materials">Materials</option>
+                        </select>
+                        <div id="invoiceTradeRateInfo" class="rate-info"></div>
+                    </div>
+                    <div class="form-group">
+                        <label>Description *</label>
+                        <input type="text" id="invoiceDescription" placeholder="Describe the work">
+                    </div>
+                </div>
+
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label>Quantity *</label>
+                        <input type="number" id="invoiceQuantity" value="1" min="0.1" step="0.1">
+                    </div>
+                    <div class="form-group">
+                        <label>Rate Type</label>
+                        <div class="rate-type-selector">
+                            <button type="button" class="rate-type-btn invoice-rate-btn" data-type="hourly">Hourly Rate</button>
+                            <button type="button" class="rate-type-btn invoice-rate-btn" data-type="daily">Day Rate</button>
+                            <button type="button" class="rate-type-btn invoice-rate-btn active" data-type="job">Per Job</button>
+                            <button type="button" class="rate-type-btn invoice-rate-btn" data-type="custom">Custom</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label id="invoiceRateLabel">Unit Price (£) *</label>
+                        <input type="number" id="invoiceUnitPrice" placeholder="Enter price or use standard rate" step="0.01" min="0">
+                    </div>
+                    <div class="form-group hidden" id="invoiceCustomUnitGroup">
+                        <label>Custom Unit Name</label>
+                        <input type="text" id="invoiceCustomUnit" placeholder="e.g., per sqm, per item">
+                    </div>
+                </div>
+
+                <button class="btn btn-primary" onclick="addInvoiceItem()">Add Item to Invoice</button>
+            </div>
+
+            <div class="section" id="invoiceItemsSection" style="display: none;">
+                <h2 class="section-title">Invoice Items</h2>
+                <div style="overflow-x: auto;">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Category</th>
+                                <th>Description</th>
+                                <th class="text-center">Qty</th>
+                                <th class="text-right">Unit Price</th>
+                                <th class="text-right">Total</th>
+                                <th class="text-center">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="invoiceItems"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="section" id="invoiceNotesSection">
+                <h2 class="section-title">Additional Notes (Optional)</h2>
+                <div class="form-group">
+                    <label>Custom Notes</label>
+                    <textarea id="invoiceCustomNotes" rows="4" placeholder="Add any additional notes or payment terms..."></textarea>
+                </div>
+            </div>
+
+            <div class="section" id="invoiceDeductionSection">
+                <h2 class="section-title">Deductions (Optional)</h2>
+                <div class="form-group">
+                    <label for="invoiceDeduction">Deduction Amount (£)</label>
+                    <input type="number" id="invoiceDeduction" step="0.01" min="0" value="0" placeholder="0.00">
+                    <small style="display: block; margin-top: 5px; color: #666; font-size: 12px;">Enter any amount to deduct from the total (after VAT)</small>
+                </div>
+            </div>
+
+            <div id="generateInvoiceSection" style="display: none; margin-top: 20px; text-align: center;">
+                <button class="btn btn-success" onclick="previewInvoice()">Preview Invoice</button>
+                <button class="btn btn-secondary" onclick="downloadInvoice()">Download PDF</button>
+            </div>
+        </div>
+
+        <div id="invoicePreviewModal" class="modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <span class="close" onclick="closeInvoicePreview()">&times;</span>
+                    <h2>Invoice Preview</h2>
+                </div>
+                <div class="modal-body" id="invoicePreviewBody">
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-success" onclick="downloadInvoice()">Download PDF</button>
+                    <button class="btn btn-secondary" onclick="closeInvoicePreview()">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
     <!-- Matrix Animation Script -->
     <script>
         const canvas = document.getElementById('matrix');
@@ -378,7 +581,9 @@
     </script>
 
     <script src="navigation.js"></script>
-    <script src="pdf_generator.js"></script>
     <script src="script.js"></script>
+    <script src="pdf_generator.js"></script>
+    <script src="invoice.js"></script>
+    <script src="invoice_pdfgen.js"></script>
 </body>
 </html>
