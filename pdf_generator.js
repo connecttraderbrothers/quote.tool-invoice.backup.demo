@@ -5,6 +5,7 @@ const PDFSHIFT_API_KEY = 'sk_baa46c861371ec5f60ab2e83221fdac1ccce517b';
 function generateCompleteHTML() {
     var clientName = document.getElementById('clientName').value || '[Client Name]';
     var clientPhone = document.getElementById('clientPhone').value;
+    var clientEmail = document.getElementById('clientEmail').value;
     var projectAddress = document.getElementById('projectAddress').value || '[Project Address]';
     var projectPostcode = document.getElementById('projectPostcode').value;
     var customerId = document.getElementById('customerId').value || 'N/A';
@@ -21,6 +22,10 @@ function generateCompleteHTML() {
     }
     var vat = subtotal * 0.20;
     var total = subtotal + vat;
+
+    // Sort items by category
+    var sortedItems = sortItemsByCategory(items);
+    var groupedItems = groupItemsByCategory(sortedItems);
 
     var styles = `
     <style>
@@ -151,6 +156,15 @@ function generateCompleteHTML() {
       .items-table td:nth-child(4) {
         text-align: right;
       }
+      .category-row {
+        background: #f9f9f9;
+        font-weight: bold;
+        color: #333;
+      }
+      .category-row td {
+        padding: 10px 12px;
+        border-bottom: 2px solid #ddd;
+      }
       .notes-section {
         margin: 30px 0;
         padding: 20px;
@@ -261,6 +275,7 @@ function generateCompleteHTML() {
             <span class="info-label">Phone:</span>
             <span class="info-value">${clientPhone || 'N/A'}</span>
           </div>
+          ${clientEmail ? '<div class="info-row"><span class="info-label">Email:</span><span class="info-value">' + clientEmail + '</span></div>' : ''}
         </div>
 
         <div class="estimate-details">
@@ -294,16 +309,25 @@ function generateCompleteHTML() {
         </thead>
         <tbody>`;
 
-    for (var i = 0; i < items.length; i++) {
-        var item = items[i];
-        bodyContent += `
+    // Render items grouped and sorted by category
+    categoryOrder.forEach(function(category) {
+        if (groupedItems[category]) {
+            bodyContent += `
+          <tr class="category-row">
+            <td colspan="4"><strong>${category}</strong></td>
+          </tr>`;
+            
+            groupedItems[category].forEach(function(item) {
+                bodyContent += `
           <tr>
             <td>${item.description}</td>
             <td>${item.quantity}</td>
             <td>£${item.unitPrice.toFixed(2)}</td>
             <td>£${item.lineTotal.toFixed(2)}</td>
           </tr>`;
-    }
+            });
+        }
+    });
 
     bodyContent += `
         </tbody>
@@ -338,7 +362,7 @@ function generateCompleteHTML() {
 
       <div class="footer-note">
         If you have any questions about this estimate, please contact<br>
-        us at traderbrotherslimited@gmail.com, or 07979 309957 
+        us at traderbrotherslimited@gmail.com, or 07931 810557 
         <div class="thank-you">Thank you for your business</div>
       </div>
     </div>`;
