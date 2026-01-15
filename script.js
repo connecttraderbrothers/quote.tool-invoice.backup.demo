@@ -3,6 +3,35 @@ var currentRateType = 'job';
 var estimateNumber = 1;
 var editingIndex = -1;
 
+// Define category order (matches dropdown menu order)
+var categoryOrder = [
+    'Downtakings',
+    'General Building',
+    'Building work',
+    'Carpentry',
+    'Joinery',
+    'Electrical',
+    'Electricals',
+    'Plumbing',
+    'Gas work/Plumbing',
+    'Plastering',
+    'Skimming /Painting',
+    'Painting & Decorating',
+    'Tiling',
+    'Roofing',
+    'Kitchen Fitting',
+    'Bathroom Fitting',
+    'Bathrooms',
+    'Flooring',
+    'Bricklaying',
+    'HVAC',
+    'Groundworks',
+    'Scaffolding',
+    'Glazing',
+    'Insulation',
+    'Materials'
+];
+
 // Edinburgh 2025 standard trade rates
 var tradeRates = {
     'Downtakings': { hourly: 30, daily: 220, job: 0 },
@@ -192,7 +221,6 @@ function clearForm() {
 }
 
 function editItem(index) {
-    // Cancel any existing edit
     if (editingIndex >= 0) {
         cancelEdit();
     }
@@ -200,7 +228,6 @@ function editItem(index) {
     editingIndex = index;
     var item = items[index];
     
-    // Build select options for category
     var categoryOptions = '';
     var categories = Object.keys(tradeRates);
     categories.unshift('General');
@@ -235,7 +262,6 @@ function editItem(index) {
         </td>
     `;
     
-    // Auto-update total when quantity or price changes
     document.getElementById('edit-quantity-' + index).addEventListener('input', function() {
         updateEditTotal(index);
     });
@@ -330,6 +356,31 @@ function repositionItem(index) {
     updateQuoteTable();
 }
 
+// Helper function to sort items by category order
+function sortItemsByCategory(itemsArray) {
+    return itemsArray.slice().sort(function(a, b) {
+        var indexA = categoryOrder.indexOf(a.category);
+        var indexB = categoryOrder.indexOf(b.category);
+        
+        if (indexA === -1) indexA = 999;
+        if (indexB === -1) indexB = 999;
+        
+        return indexA - indexB;
+    });
+}
+
+// Helper function to group items by category
+function groupItemsByCategory(itemsArray) {
+    var grouped = {};
+    itemsArray.forEach(function(item) {
+        if (!grouped[item.category]) {
+            grouped[item.category] = [];
+        }
+        grouped[item.category].push(item);
+    });
+    return grouped;
+}
+
 function updateQuoteTable() {
     var tbody = document.getElementById('quoteItems');
     var quoteSection = document.getElementById('quoteSection');
@@ -400,7 +451,9 @@ function previewQuote() {
     
     var clientName = document.getElementById('clientName').value || '[Client Name]';
     var clientPhone = document.getElementById('clientPhone').value;
+    var clientEmail = document.getElementById('clientEmail').value;
     var projectAddress = document.getElementById('projectAddress').value || '[Project Address]';
+    var projectPostcode = document.getElementById('projectPostcode').value;
     var customerId = document.getElementById('customerId').value || 'N/A';
     var depositPercent = document.getElementById('depositPercent').value || '30';
     
@@ -415,6 +468,10 @@ function previewQuote() {
     }
     var vat = subtotal * 0.20;
     var total = subtotal + vat;
+
+    // Sort items by category
+    var sortedItems = sortItemsByCategory(items);
+    var groupedItems = groupItemsByCategory(sortedItems);
 
     var previewHtml = `
     <style>
@@ -440,6 +497,8 @@ function previewQuote() {
       .items-table-preview th:nth-child(2), .items-table-preview th:nth-child(3), .items-table-preview th:nth-child(4) { text-align: right; width: 100px; }
       .items-table-preview td { padding: 12px; font-size: 13px; border-bottom: 1px solid #eee; color: #333; }
       .items-table-preview td:nth-child(2), .items-table-preview td:nth-child(3), .items-table-preview td:nth-child(4) { text-align: right; }
+      .category-row { background: #f9f9f9; font-weight: bold; color: #333; }
+      .category-row td { padding: 10px 12px; border-bottom: 2px solid #ddd; }
       .notes-section-preview { margin: 30px 0; padding: 20px; background: #f9f9f9; border-left: 3px solid #bc9c22; }
       .notes-section-preview h3 { font-size: 13px; margin-bottom: 10px; color: #333; }
       .notes-section-preview ol { margin-left: 20px; font-size: 12px; line-height: 1.8; color: #666; }
@@ -482,12 +541,13 @@ function previewQuote() {
           </div>
           <div class="info-row-preview">
             <span class="info-label-preview">Postcode:</span>
-            <span class="info-value-preview">${document.getElementById('projectPostcode').value || 'N/A'}</span>
+            <span class="info-value-preview">${projectPostcode || 'N/A'}</span>
           </div>
           <div class="info-row-preview">
             <span class="info-label-preview">Phone:</span>
             <span class="info-value-preview">${clientPhone || 'N/A'}</span>
           </div>
+          ${clientEmail ? `<div class="info-row-preview"><span class="info-label-preview">Email:</span><span class="info-value-preview">${clientEmail}</span></div>` : ''}
         </div>
 
         <div class="estimate-details-preview">
@@ -521,16 +581,25 @@ function previewQuote() {
         </thead>
         <tbody>`;
 
-    for (var i = 0; i < items.length; i++) {
-        var item = items[i];
-        previewHtml += `
+    // Render items grouped and sorted by category
+    categoryOrder.forEach(function(category) {
+        if (groupedItems[category]) {
+            previewHtml += `
+          <tr class="category-row">
+            <td colspan="4"><strong>${category}</strong></td>
+          </tr>`;
+            
+            groupedItems[category].forEach(function(item) {
+                previewHtml += `
           <tr>
             <td>${item.description}</td>
             <td>${item.quantity}</td>
             <td>£${item.unitPrice.toFixed(2)}</td>
             <td>£${item.lineTotal.toFixed(2)}</td>
           </tr>`;
-    }
+            });
+        }
+    });
 
     previewHtml += `
         </tbody>
@@ -541,7 +610,7 @@ function previewQuote() {
         <ol>
           <li>Estimate valid for 31 days</li>
           <li>Payment of ${depositPercent}% is required to secure start date</li>
-          <li>Pending to be supplied by customer</li>
+          <li>Parking to be supplied by customer</li>
           <li>Any extras to be charged accordingly</li>
         </ol>
       </div>
@@ -560,12 +629,12 @@ function previewQuote() {
             <span>Total</span>
             <span>£${total.toFixed(2)}</span>
           </div>
+         </div>
         </div>
-      </div>
 
       <div class="footer-note-preview">
         If you have any questions about this estimate, please contact<br>
-        Trader Brothers on 07448835577
+        traderbrotherslimited@gmail.com, or 07931 810557
         <div class="thank-you-preview">Thank you for your business</div>
       </div>
     </div>`;
@@ -583,4 +652,4 @@ window.onclick = function(event) {
     if (event.target == modal) {
         closePreview();
     }
-}
+};
