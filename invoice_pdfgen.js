@@ -16,6 +16,7 @@ function previewInvoice() {
     var paymentDueDays = document.getElementById('paymentDueDays').value || '30';
     var paymentStatus = document.getElementById('paymentStatus').value;
     var deduction = parseFloat(document.getElementById('invoiceDeduction').value) || 0;
+    var customNotes = document.getElementById('invoiceCustomNotes').value.trim();
     
     var today = new Date();
     var invoiceDate = today.toLocaleDateString('en-GB');
@@ -185,7 +186,8 @@ function previewInvoice() {
       <div class="payment-terms-preview">
         <h3>Payment Terms:</h3>
         <p>Payment due within ${paymentDueDays} days from invoice date.</p>
-      </div>
+        ${customNotes ? '<div style="margin-top: 15px;"><strong>Additional Notes:</strong><br>' + customNotes.replace(/\n/g, '<br>') + '</div>' : ''}
+     </div>
 
       <div class="bottom-section-preview">
         <div class="bank-details-preview" style="flex: 1;">
@@ -362,6 +364,7 @@ function generateInvoiceHTML() {
     var paymentDueDays = document.getElementById('paymentDueDays').value || '30';
     var paymentStatus = document.getElementById('paymentStatus').value;
     var deduction = parseFloat(document.getElementById('invoiceDeduction').value) || 0;
+    var customNotes = document.getElementById('invoiceCustomNotes').value.trim();
     
     var today = new Date();
     var invoiceDate = today.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }).replace(/ /g, ' ');
@@ -743,7 +746,8 @@ function generateInvoiceHTML() {
       <div class="payment-terms">
         <h3>Payment Terms:</h3>
         <p>Payment due within ${paymentDueDays} days from invoice date.</p>
-      </div>
+        ${customNotes ? '<div style="margin-top: 15px;"><strong>Additional Notes:</strong><br>' + customNotes.replace(/\n/g, '<br>') + '</div>' : ''}
+    </div>
 
       <div class="bottom-section">
         <div class="bank-details">
