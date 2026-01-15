@@ -6,6 +6,7 @@ window.addEventListener('DOMContentLoaded', function() {
     document.getElementById('splashScreen').style.display = 'flex';
     document.getElementById('dashboardScreen').style.display = 'none';
     document.getElementById('quotationScreen').style.display = 'none';
+    document.getElementById('invoiceScreen').style.display = 'none';
     
     // Reset body overflow for splash
     document.body.style.overflow = 'hidden';
@@ -57,6 +58,7 @@ function showDashboard() {
     document.getElementById('splashScreen').style.display = 'none';
     document.getElementById('dashboardScreen').style.display = 'block';
     document.getElementById('quotationScreen').style.display = 'none';
+    document.getElementById('invoiceScreen').style.display = 'none';
     
     // Hide matrix canvas
     if (canvas) {
@@ -78,6 +80,7 @@ function showQuotationTool() {
     document.getElementById('splashScreen').style.display = 'none';
     document.getElementById('dashboardScreen').style.display = 'none';
     document.getElementById('quotationScreen').style.display = 'block';
+    document.getElementById('invoiceScreen').style.display = 'none';
     
     // Hide matrix canvas
     if (canvas) {
@@ -92,6 +95,28 @@ function showQuotationTool() {
     window.scrollTo(0, 0);
 }
 
+// Show invoice tool screen
+function showInvoiceTool() {
+    const canvas = document.getElementById('matrix');
+    
+    document.getElementById('splashScreen').style.display = 'none';
+    document.getElementById('dashboardScreen').style.display = 'none';
+    document.getElementById('quotationScreen').style.display = 'none';
+    document.getElementById('invoiceScreen').style.display = 'block';
+    
+    // Hide matrix canvas
+    if (canvas) {
+        canvas.style.display = 'none';
+    }
+    
+    // Enable scrolling for invoice tool
+    document.body.style.overflow = 'auto';
+    document.body.style.overflowX = 'hidden';
+    
+    // Scroll to top
+    window.scrollTo(0, 0);
+}
+
 // Show splash screen (if needed for refresh/reload)
 function showSplash() {
     const canvas = document.getElementById('matrix');
@@ -99,6 +124,7 @@ function showSplash() {
     document.getElementById('splashScreen').style.display = 'flex';
     document.getElementById('dashboardScreen').style.display = 'none';
     document.getElementById('quotationScreen').style.display = 'none';
+    document.getElementById('invoiceScreen').style.display = 'none';
     
     // Show matrix canvas
     if (canvas) {
