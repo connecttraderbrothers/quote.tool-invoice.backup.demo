@@ -456,6 +456,7 @@ function previewQuote() {
     var projectPostcode = document.getElementById('projectPostcode').value;
     var customerId = document.getElementById('customerId').value || 'N/A';
     var depositPercent = document.getElementById('depositPercent').value || '30';
+    var customNotes = document.getElementById('customNotes').value.trim();
     
     var today = new Date();
     var quoteDate = today.toLocaleDateString('en-GB');
@@ -605,15 +606,16 @@ function previewQuote() {
         </tbody>
       </table>
 
-      <div class="notes-section-preview">
-        <h3>Notes:</h3>
-        <ol>
-          <li>Estimate valid for 31 days</li>
-          <li>Payment of ${depositPercent}% is required to secure start date</li>
-          <li>Parking to be supplied by customer</li>
-          <li>Any extras to be charged accordingly</li>
-        </ol>
-      </div>
+     <div class="notes-section-preview">
+       <h3>Notes:</h3>
+       <ol>
+         <li>Estimate valid for 31 days</li>
+         <li>Payment of ${depositPercent}% is required to secure start date</li>
+         <li>Parking to be supplied by customer</li>
+         <li>Any extras to be charged accordingly</li>
+      </ol>
+      ${customNotes ? '<div style="margin-top: 15px;"><strong>Additional Notes:</strong><br>' + customNotes.replace(/\n/g, '<br>') + '</div>' : ''}
+    </div>
 
       <div class="totals-section-preview">
         <div class="totals-box-preview">
