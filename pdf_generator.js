@@ -342,8 +342,7 @@ function generateCompleteHTML() {
           <li>Parking to be supplied by customer</li>
           <li>Any additional work to be charged accordingly</li>
        </ol>
-       ${customNotes ? '<div style="margin-top: 15px;"><strong>Additional Notes:</strong><br>' + customNotes.replace(/\n/g, '<br>') + '</div>' : ''}
-     </div>
+      ${customNotes ? '<div style="margin-top: 15px; font-size: 12px; line-height: 1.8; color: #666;"><strong>Additional Notes:</strong><br>' + customNotes.replace(/\n/g, '<br>') + '</div>' : ''}
 
       <div class="totals-section">
         <div class="totals-box">
