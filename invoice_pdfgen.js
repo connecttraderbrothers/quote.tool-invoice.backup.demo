@@ -187,7 +187,7 @@ function previewInvoice() {
         <h3>Payment Terms:</h3>
         <p>Payment due within ${paymentDueDays} days from invoice date.</p>
         ${customNotes ? '<div style="margin-top: 15px;"><strong>Additional Notes:</strong><br>' + customNotes.replace(/\n/g, '<br>') + '</div>' : ''}
-     </div>
+      </div>
 
       <div class="bottom-section-preview">
         <div class="bank-details-preview" style="flex: 1;">
@@ -747,7 +747,7 @@ function generateInvoiceHTML() {
         <h3>Payment Terms:</h3>
         <p>Payment due within ${paymentDueDays} days from invoice date.</p>
         ${customNotes ? '<div style="margin-top: 15px;"><strong>Additional Notes:</strong><br>' + customNotes.replace(/\n/g, '<br>') + '</div>' : ''}
-    </div>
+      </div>
 
       <div class="bottom-section">
         <div class="bank-details">
