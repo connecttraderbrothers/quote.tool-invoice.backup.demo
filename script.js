@@ -615,7 +615,8 @@ function previewQuote() {
          <li>Any extras to be charged accordingly</li>
       </ol>
      ${customNotes ? '<div style="margin-top: 15px; font-size: 12px; line-height: 1.8; color: #666;"><strong>Additional Notes:</strong><br>' + customNotes.replace(/\n/g, '<br>') + '</div>' : ''}
-
+   </div>
+   
       <div class="totals-section-preview">
         <div class="totals-box-preview">
           <div class="total-row-preview subtotal">
