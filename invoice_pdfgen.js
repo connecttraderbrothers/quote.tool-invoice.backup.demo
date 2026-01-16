@@ -186,9 +186,9 @@ function previewInvoice() {
       <div class="payment-terms-preview">
         <h3>Payment Terms:</h3>
         <p>Payment due within ${paymentDueDays} days from invoice date.</p>
-        ${customNotes ? '<div style="margin-top: 15px;"><strong>Additional Notes:</strong><br>' + customNotes.replace(/\n/g, '<br>') + '</div>' : ''}
-      </div>
-
+       ${customNotes ? '<div style="margin-top: 15px; font-size: 12px; line-height: 1.8; color: #666;"><strong>Additional Notes:</strong><br>' + customNotes.replace(/\n/g, '<br>') + '</div>' : ''}
+     </div>
+     
       <div class="bottom-section-preview">
         <div class="bank-details-preview" style="flex: 1;">
           <h3>Bank Details:</h3>
@@ -746,9 +746,9 @@ function generateInvoiceHTML() {
       <div class="payment-terms">
         <h3>Payment Terms:</h3>
         <p>Payment due within ${paymentDueDays} days from invoice date.</p>
-        ${customNotes ? '<div style="margin-top: 15px;"><strong>Additional Notes:</strong><br>' + customNotes.replace(/\n/g, '<br>') + '</div>' : ''}
-      </div>
-
+      ${customNotes ? '<div style="margin-top: 15px; font-size: 12px; line-height: 1.8; color: #666;"><strong>Additional Notes:</strong><br>' + customNotes.replace(/\n/g, '<br>') + '</div>' : ''}
+    </div>
+     
       <div class="bottom-section">
         <div class="bank-details">
           <h3>Bank Details:</h3>
