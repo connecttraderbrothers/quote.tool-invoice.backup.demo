@@ -5,31 +5,11 @@ var editingIndex = -1;
 
 // Define category order (matches dropdown menu order)
 var categoryOrder = [
-    'Downtakings',
-    'General Building',
-    'Building work',
-    'Carpentry',
-    'Joinery',
-    'Electrical',
-    'Electricals',
-    'Plumbing',
-    'Gas work/Plumbing',
-    'Plastering',
-    'Skimming /Painting',
-    'Painting & Decorating',
-    'Tiling',
-    'Roofing',
-    'Kitchen Fitting',
-    'Bathroom Fitting',
-    'Bathrooms',
-    'Flooring',
-    'Bricklaying',
-    'HVAC',
-    'Groundworks',
-    'Scaffolding',
-    'Glazing',
-    'Insulation',
-    'Materials'
+    'Downtakings', 'General Building', 'Building work', 'Carpentry', 'Joinery',
+    'Electrical', 'Electricals', 'Plumbing', 'Gas work/Plumbing', 'Plastering',
+    'Skimming /Painting', 'Painting & Decorating', 'Tiling', 'Roofing',
+    'Kitchen Fitting', 'Bathroom Fitting', 'Bathrooms', 'Flooring', 'Bricklaying',
+    'HVAC', 'Groundworks', 'Scaffolding', 'Glazing', 'Insulation', 'Materials'
 ];
 
 // Edinburgh 2025 standard trade rates
@@ -68,110 +48,78 @@ if (localStorage.getItem('traderBrosEstimateCount')) {
 updateEstimateCounter();
 
 function updateEstimateCounter() {
-    document.getElementById('estimateCounter').textContent = '#' + String(estimateNumber).padStart(4, '0');
+    var counter = document.getElementById('estimateCounter');
+    if (counter) counter.textContent = '#' + String(estimateNumber).padStart(4, '0');
 }
 
-// Auto-generate Customer ID from client name
-document.getElementById('clientName').addEventListener('input', function() {
-    var name = this.value.trim();
-    if (name) {
-        var parts = name.split(' ');
-        var customerId = '';
-        
-        if (parts.length >= 2) {
-            var firstName = parts[0].substring(0, 3).toUpperCase();
-            var lastName = parts[parts.length - 1].substring(0, 3).toUpperCase();
-            var randomNum = Math.floor(1000 + Math.random() * 9000);
-            customerId = firstName + lastName + randomNum;
-        } else if (parts.length === 1) {
-            var singleName = parts[0].substring(0, 6).toUpperCase();
-            var randomNum = Math.floor(1000 + Math.random() * 9000);
-            customerId = singleName + randomNum;
-        }
-        
-        document.getElementById('customerId').value = customerId;
-    } else {
-        document.getElementById('customerId').value = '';
+// Initialize event listeners when DOM is ready
+document.addEventListener('DOMContentLoaded', function() {
+    var clientNameInput = document.getElementById('clientName');
+    if (clientNameInput) {
+        clientNameInput.addEventListener('input', function() {
+            var name = this.value.trim();
+            if (name) {
+                var parts = name.split(' ');
+                var customerId = '';
+                if (parts.length >= 2) {
+                    customerId = parts[0].substring(0, 3).toUpperCase() + parts[parts.length - 1].substring(0, 3).toUpperCase() + Math.floor(1000 + Math.random() * 9000);
+                } else {
+                    customerId = parts[0].substring(0, 6).toUpperCase() + Math.floor(1000 + Math.random() * 9000);
+                }
+                document.getElementById('customerId').value = customerId;
+            } else {
+                document.getElementById('customerId').value = '';
+            }
+        });
     }
-});
 
-// Trade category change handler
-document.getElementById('tradeCategory').addEventListener('change', function() {
-    var selectedTrade = this.value;
-    var rateInfo = document.getElementById('tradeRateInfo');
-    
-    if (selectedTrade && tradeRates[selectedTrade]) {
-        var rates = tradeRates[selectedTrade];
-        var infoText = 'Standard rates: ';
-        var rateParts = [];
-        
-        if (rates.hourly > 0) rateParts.push('£' + rates.hourly + '/hr');
-        if (rates.daily > 0) rateParts.push('£' + rates.daily + '/day');
-        if (rates.job > 0) rateParts.push('£' + rates.job + '/job');
-        
-        if (rateParts.length > 0) {
-            infoText += rateParts.join(' | ');
-            rateInfo.textContent = infoText;
-        } else {
-            rateInfo.textContent = '';
-        }
-        
-        updatePriceFromTrade();
-    } else {
-        rateInfo.textContent = '';
-        document.getElementById('unitPrice').value = '';
+    var tradeCategorySelect = document.getElementById('tradeCategory');
+    if (tradeCategorySelect) {
+        tradeCategorySelect.addEventListener('change', function() {
+            var selectedTrade = this.value;
+            var rateInfo = document.getElementById('tradeRateInfo');
+            if (selectedTrade && tradeRates[selectedTrade]) {
+                var rates = tradeRates[selectedTrade];
+                var rateParts = [];
+                if (rates.hourly > 0) rateParts.push('Â£' + rates.hourly + '/hr');
+                if (rates.daily > 0) rateParts.push('Â£' + rates.daily + '/day');
+                if (rates.job > 0) rateParts.push('Â£' + rates.job + '/job');
+                rateInfo.textContent = rateParts.length > 0 ? 'Standard rates: ' + rateParts.join(' | ') : '';
+                updatePriceFromTrade();
+            } else {
+                rateInfo.textContent = '';
+                document.getElementById('unitPrice').value = '';
+            }
+        });
     }
+
+    document.querySelectorAll('.rate-type-btn:not(.invoice-rate-btn)').forEach(function(btn) {
+        btn.addEventListener('click', function() {
+            document.querySelectorAll('.rate-type-btn:not(.invoice-rate-btn)').forEach(function(b) { b.classList.remove('active'); });
+            this.classList.add('active');
+            currentRateType = this.getAttribute('data-type');
+            var customUnitGroup = document.getElementById('customUnitGroup');
+            var rateLabel = document.getElementById('rateLabel');
+            if (currentRateType === 'custom') {
+                customUnitGroup.classList.remove('hidden');
+                rateLabel.textContent = 'Unit Price (Â£) *';
+            } else {
+                customUnitGroup.classList.add('hidden');
+                rateLabel.textContent = currentRateType === 'daily' ? 'Day Rate (Â£) *' : currentRateType === 'job' ? 'Per Job Rate (Â£) *' : 'Hourly Rate (Â£) *';
+            }
+            updatePriceFromTrade();
+        });
+    });
 });
 
 function updatePriceFromTrade() {
     var selectedTrade = document.getElementById('tradeCategory').value;
     if (selectedTrade && tradeRates[selectedTrade]) {
         var rates = tradeRates[selectedTrade];
-        var price = 0;
-        
-        if (currentRateType === 'hourly' && rates.hourly > 0) {
-            price = rates.hourly;
-        } else if (currentRateType === 'daily' && rates.daily > 0) {
-            price = rates.daily;
-        } else if (currentRateType === 'job' && rates.job > 0) {
-            price = rates.job;
-        }
-        
-        if (price > 0) {
-            document.getElementById('unitPrice').value = price;
-        }
+        var price = currentRateType === 'hourly' ? rates.hourly : currentRateType === 'daily' ? rates.daily : currentRateType === 'job' ? rates.job : 0;
+        if (price > 0) document.getElementById('unitPrice').value = price;
     }
 }
-
-// Rate type selector
-document.querySelectorAll('.rate-type-btn').forEach(function(btn) {
-    btn.addEventListener('click', function() {
-        document.querySelectorAll('.rate-type-btn').forEach(function(b) {
-            b.classList.remove('active');
-        });
-        this.classList.add('active');
-        currentRateType = this.getAttribute('data-type');
-        
-        var customUnitGroup = document.getElementById('customUnitGroup');
-        var rateLabel = document.getElementById('rateLabel');
-        
-        if (currentRateType === 'custom') {
-            customUnitGroup.classList.remove('hidden');
-            rateLabel.textContent = 'Unit Price (£) *';
-        } else if (currentRateType === 'daily') {
-            customUnitGroup.classList.add('hidden');
-            rateLabel.textContent = 'Day Rate (£) *';
-        } else if (currentRateType === 'job') {
-            customUnitGroup.classList.add('hidden');
-            rateLabel.textContent = 'Per Job Rate (£) *';
-        } else {
-            customUnitGroup.classList.add('hidden');
-            rateLabel.textContent = 'Hourly Rate (£) *';
-        }
-        
-        updatePriceFromTrade();
-    });
-});
 
 function addItem() {
     var category = document.getElementById('tradeCategory').value || 'General';
@@ -180,33 +128,10 @@ function addItem() {
     var unitPrice = parseFloat(document.getElementById('unitPrice').value);
     var customUnit = document.getElementById('customUnit').value;
 
-    if (!description || !unitPrice) {
-        alert('Please enter description and unit price');
-        return;
-    }
+    if (!description || !unitPrice) { alert('Please enter description and unit price'); return; }
 
-    var unit = '';
-    if (currentRateType === 'hourly') {
-        unit = 'hour';
-    } else if (currentRateType === 'daily') {
-        unit = 'day';
-    } else if (currentRateType === 'job') {
-        unit = 'job';
-    } else {
-        unit = customUnit || 'item';
-    }
-
-    var lineTotal = unitPrice * quantity;
-
-    items.push({
-        category: category,
-        description: description,
-        quantity: quantity,
-        unit: unit,
-        unitPrice: unitPrice,
-        lineTotal: lineTotal
-    });
-
+    var unit = currentRateType === 'hourly' ? 'hour' : currentRateType === 'daily' ? 'day' : currentRateType === 'job' ? 'job' : customUnit || 'item';
+    items.push({ category: category, description: description, quantity: quantity, unit: unit, unitPrice: unitPrice, lineTotal: unitPrice * quantity });
     updateQuoteTable();
     clearForm();
 }
@@ -221,62 +146,29 @@ function clearForm() {
 }
 
 function editItem(index) {
-    if (editingIndex >= 0) {
-        cancelEdit();
-    }
-    
+    if (editingIndex >= 0) cancelEdit();
     editingIndex = index;
     var item = items[index];
-    
-    var categoryOptions = '';
-    var categories = Object.keys(tradeRates);
-    categories.unshift('General');
-    for (var i = 0; i < categories.length; i++) {
-        var selected = categories[i] === item.category ? 'selected' : '';
-        categoryOptions += '<option value="' + categories[i] + '" ' + selected + '>' + categories[i] + '</option>';
-    }
-    
+    var categoryOptions = '<option value="General">General</option>';
+    Object.keys(tradeRates).forEach(function(cat) {
+        categoryOptions += '<option value="' + cat + '"' + (cat === item.category ? ' selected' : '') + '>' + cat + '</option>';
+    });
     var row = document.getElementById('quoteItems').rows[index];
     row.classList.add('editing-row');
-    row.innerHTML = `
-        <td>
-            <select class="inline-edit-input" id="edit-category-${index}" style="width: 100%;">
-                ${categoryOptions}
-            </select>
-        </td>
-        <td>
-            <input type="text" class="inline-edit-input" id="edit-description-${index}" value="${item.description}" style="width: 100%;">
-        </td>
-        <td class="text-center">
-            <input type="number" class="inline-edit-input" id="edit-quantity-${index}" value="${item.quantity}" step="0.1" min="0.1" style="width: 80px;">
-        </td>
-        <td class="text-right">
-            <input type="number" class="inline-edit-input" id="edit-price-${index}" value="${item.unitPrice}" step="0.01" min="0" style="width: 100px;">
-        </td>
-        <td class="text-right" style="font-weight: 600;">£${item.lineTotal.toFixed(2)}</td>
-        <td class="text-center">
-            <div style="display: flex; gap: 5px; justify-content: center; flex-wrap: wrap;">
-                <button class="btn-action btn-save" onclick="saveEdit(${index})" title="Save">Save</button>
-                <button class="btn-action btn-cancel" onclick="cancelEdit()" title="Cancel">Cancel</button>
-            </div>
-        </td>
-    `;
-    
-    document.getElementById('edit-quantity-' + index).addEventListener('input', function() {
-        updateEditTotal(index);
-    });
-    document.getElementById('edit-price-' + index).addEventListener('input', function() {
-        updateEditTotal(index);
-    });
+    row.innerHTML = '<td><select class="inline-edit-input" id="edit-category-' + index + '" style="width:100%">' + categoryOptions + '</select></td>' +
+        '<td><input type="text" class="inline-edit-input" id="edit-description-' + index + '" value="' + item.description + '" style="width:100%"></td>' +
+        '<td class="text-center"><input type="number" class="inline-edit-input" id="edit-quantity-' + index + '" value="' + item.quantity + '" step="0.1" min="0.1" style="width:80px"></td>' +
+        '<td class="text-right"><input type="number" class="inline-edit-input" id="edit-price-' + index + '" value="' + item.unitPrice + '" step="0.01" min="0" style="width:100px"></td>' +
+        '<td class="text-right" style="font-weight:600">Â£' + item.lineTotal.toFixed(2) + '</td>' +
+        '<td class="text-center"><div style="display:flex;gap:5px;justify-content:center;flex-wrap:wrap"><button class="btn-action btn-save" onclick="saveEdit(' + index + ')">Save</button><button class="btn-action btn-cancel" onclick="cancelEdit()">Cancel</button></div></td>';
+    document.getElementById('edit-quantity-' + index).addEventListener('input', function() { updateEditTotal(index); });
+    document.getElementById('edit-price-' + index).addEventListener('input', function() { updateEditTotal(index); });
 }
 
 function updateEditTotal(index) {
-    var quantity = parseFloat(document.getElementById('edit-quantity-' + index).value) || 0;
+    var qty = parseFloat(document.getElementById('edit-quantity-' + index).value) || 0;
     var price = parseFloat(document.getElementById('edit-price-' + index).value) || 0;
-    var total = quantity * price;
-    
-    var row = document.getElementById('quoteItems').rows[index];
-    row.cells[4].textContent = '£' + total.toFixed(2);
+    document.getElementById('quoteItems').rows[index].cells[4].textContent = 'Â£' + (qty * price).toFixed(2);
 }
 
 function saveEdit(index) {
@@ -284,100 +176,44 @@ function saveEdit(index) {
     var description = document.getElementById('edit-description-' + index).value;
     var quantity = parseFloat(document.getElementById('edit-quantity-' + index).value);
     var unitPrice = parseFloat(document.getElementById('edit-price-' + index).value);
-    
-    if (!description || !unitPrice || !quantity) {
-        alert('Please fill in all fields');
-        return;
-    }
-    
-    var lineTotal = unitPrice * quantity;
-    
-    items[index] = {
-        category: category,
-        description: description,
-        quantity: quantity,
-        unit: items[index].unit,
-        unitPrice: unitPrice,
-        lineTotal: lineTotal
-    };
-    
+    if (!description || !unitPrice || !quantity) { alert('Please fill in all fields'); return; }
+    items[index] = { category: category, description: description, quantity: quantity, unit: items[index].unit, unitPrice: unitPrice, lineTotal: unitPrice * quantity };
     editingIndex = -1;
     updateQuoteTable();
 }
 
-function cancelEdit() {
-    editingIndex = -1;
-    updateQuoteTable();
-}
+function cancelEdit() { editingIndex = -1; updateQuoteTable(); }
 
-function removeItem(index) {
-    if (confirm('Are you sure you want to delete this item?')) {
-        items.splice(index, 1);
-        editingIndex = -1;
-        updateQuoteTable();
-    }
-}
+function removeItem(index) { if (confirm('Delete this item?')) { items.splice(index, 1); editingIndex = -1; updateQuoteTable(); } }
 
 function moveItem(index, direction) {
-    if (editingIndex >= 0) {
-        alert('Please save or cancel your current edit first');
-        return;
-    }
-    
-    if (direction === 'up' && index > 0) {
-        var temp = items[index];
-        items[index] = items[index - 1];
-        items[index - 1] = temp;
-    } else if (direction === 'down' && index < items.length - 1) {
-        var temp = items[index];
-        items[index] = items[index + 1];
-        items[index + 1] = temp;
-    }
+    if (editingIndex >= 0) { alert('Save or cancel edit first'); return; }
+    if (direction === 'up' && index > 0) { var temp = items[index]; items[index] = items[index - 1]; items[index - 1] = temp; }
+    else if (direction === 'down' && index < items.length - 1) { var temp = items[index]; items[index] = items[index + 1]; items[index + 1] = temp; }
     updateQuoteTable();
 }
 
 function repositionItem(index) {
-    if (editingIndex >= 0) {
-        alert('Please save or cancel your current edit first');
-        return;
-    }
-    
-    var newPosition = prompt('Enter new position (1 to ' + items.length + '):', (index + 1));
-    if (newPosition === null) return;
-    
-    newPosition = parseInt(newPosition);
-    if (isNaN(newPosition) || newPosition < 1 || newPosition > items.length) {
-        alert('Invalid position. Please enter a number between 1 and ' + items.length);
-        return;
-    }
-    
+    if (editingIndex >= 0) { alert('Save or cancel edit first'); return; }
+    var newPos = prompt('Enter new position (1 to ' + items.length + '):', index + 1);
+    if (newPos === null) return;
+    newPos = parseInt(newPos);
+    if (isNaN(newPos) || newPos < 1 || newPos > items.length) { alert('Invalid position'); return; }
     var item = items.splice(index, 1)[0];
-    items.splice(newPosition - 1, 0, item);
+    items.splice(newPos - 1, 0, item);
     updateQuoteTable();
 }
 
-// Helper function to sort items by category order
-function sortItemsByCategory(itemsArray) {
-    return itemsArray.slice().sort(function(a, b) {
-        var indexA = categoryOrder.indexOf(a.category);
-        var indexB = categoryOrder.indexOf(b.category);
-        
-        if (indexA === -1) indexA = 999;
-        if (indexB === -1) indexB = 999;
-        
-        return indexA - indexB;
+function sortItemsByCategory(arr) {
+    return arr.slice().sort(function(a, b) {
+        var iA = categoryOrder.indexOf(a.category); var iB = categoryOrder.indexOf(b.category);
+        return (iA === -1 ? 999 : iA) - (iB === -1 ? 999 : iB);
     });
 }
 
-// Helper function to group items by category
-function groupItemsByCategory(itemsArray) {
+function groupItemsByCategory(arr) {
     var grouped = {};
-    itemsArray.forEach(function(item) {
-        if (!grouped[item.category]) {
-            grouped[item.category] = [];
-        }
-        grouped[item.category].push(item);
-    });
+    arr.forEach(function(item) { if (!grouped[item.category]) grouped[item.category] = []; grouped[item.category].push(item); });
     return grouped;
 }
 
@@ -385,70 +221,26 @@ function updateQuoteTable() {
     var tbody = document.getElementById('quoteItems');
     var quoteSection = document.getElementById('quoteSection');
     var generateSection = document.getElementById('generateSection');
-
-    if (items.length === 0) {
-        quoteSection.style.display = 'none';
-        generateSection.style.display = 'none';
-        return;
-    }
-
+    if (items.length === 0) { quoteSection.style.display = 'none'; generateSection.style.display = 'none'; return; }
     quoteSection.style.display = 'block';
     generateSection.style.display = 'block';
-
     var html = '';
     for (var i = 0; i < items.length; i++) {
         var item = items[i];
-        html += '<tr>';
-        html += '<td>' + item.category + '</td>';
-        html += '<td>' + item.description + '</td>';
-        html += '<td class="text-center">' + item.quantity + '</td>';
-        html += '<td class="text-right">£' + item.unitPrice.toFixed(2) + '</td>';
-        html += '<td class="text-right" style="font-weight: 600;">£' + item.lineTotal.toFixed(2) + '</td>';
-        html += '<td class="text-center">';
-        html += '<div style="display: flex; gap: 5px; justify-content: center; flex-wrap: wrap;">';
-        html += '<button class="btn-action btn-edit" onclick="editItem(' + i + ')" title="Edit">Edit</button>';
-        html += '<button class="btn-action btn-move" onclick="moveItem(' + i + ', \'up\')" title="Move Up" ' + (i === 0 ? 'disabled' : '') + '>↑</button>';
-        html += '<button class="btn-action btn-move" onclick="moveItem(' + i + ', \'down\')" title="Move Down" ' + (i === items.length - 1 ? 'disabled' : '') + '>↓</button>';
-        html += '<button class="btn-action btn-reposition" onclick="repositionItem(' + i + ')" title="Move to Position">#</button>';
-        html += '<button class="btn-action btn-delete" onclick="removeItem(' + i + ')" title="Delete">Del</button>';
-        html += '</div>';
-        html += '</td>';
-        html += '</tr>';
+        html += '<tr><td>' + item.category + '</td><td>' + item.description + '</td><td class="text-center">' + item.quantity + '</td><td class="text-right">Â£' + item.unitPrice.toFixed(2) + '</td><td class="text-right" style="font-weight:600">Â£' + item.lineTotal.toFixed(2) + '</td><td class="text-center"><div style="display:flex;gap:5px;justify-content:center;flex-wrap:wrap"><button class="btn-action btn-edit" onclick="editItem(' + i + ')">Edit</button><button class="btn-action btn-move" onclick="moveItem(' + i + ',\'up\')"' + (i === 0 ? ' disabled' : '') + '>â†‘</button><button class="btn-action btn-move" onclick="moveItem(' + i + ',\'down\')"' + (i === items.length - 1 ? ' disabled' : '') + '>â†“</button><button class="btn-action btn-reposition" onclick="repositionItem(' + i + ')">#</button><button class="btn-action btn-delete" onclick="removeItem(' + i + ')">Del</button></div></td></tr>';
     }
-
-    var subtotal = 0;
-    for (var j = 0; j < items.length; j++) {
-        subtotal += items[j].lineTotal;
-    }
-
+    var subtotal = items.reduce(function(sum, item) { return sum + item.lineTotal; }, 0);
     var vat = subtotal * 0.20;
     var total = subtotal + vat;
-    
-    html += '<tr class="total-row">';
-    html += '<td colspan="4" class="text-right">Subtotal:</td>';
-    html += '<td class="text-right">£' + subtotal.toFixed(2) + '</td>';
-    html += '<td></td>';
-    html += '</tr>';
-    html += '<tr class="total-row">';
-    html += '<td colspan="4" class="text-right">VAT (20%):</td>';
-    html += '<td class="text-right">£' + vat.toFixed(2) + '</td>';
-    html += '<td></td>';
-    html += '</tr>';
-    html += '<tr class="total-row">';
-    html += '<td colspan="4" class="text-right" style="font-size: 16px;"><strong>TOTAL:</strong></td>';
-    html += '<td class="text-right" style="font-size: 16px;"><strong>£' + total.toFixed(2) + '</strong></td>';
-    html += '<td></td>';
-    html += '</tr>';
-
+    html += '<tr class="total-row"><td colspan="4" class="text-right">Subtotal:</td><td class="text-right">Â£' + subtotal.toFixed(2) + '</td><td></td></tr>';
+    html += '<tr class="total-row"><td colspan="4" class="text-right">VAT (20%):</td><td class="text-right">Â£' + vat.toFixed(2) + '</td><td></td></tr>';
+    html += '<tr class="total-row"><td colspan="4" class="text-right" style="font-size:16px"><strong>TOTAL:</strong></td><td class="text-right" style="font-size:16px"><strong>Â£' + total.toFixed(2) + '</strong></td><td></td></tr>';
     tbody.innerHTML = html;
 }
 
 function previewQuote() {
-    if (editingIndex >= 0) {
-        alert('Please save or cancel your current edit first');
-        return;
-    }
-    
+    if (editingIndex >= 0) { alert('Save or cancel edit first'); return; }
+    var company = window.omegaUserData || { companyName: 'Your Company', address: '', phone: '', email: '', logo: null };
     var clientName = document.getElementById('clientName').value || '[Client Name]';
     var clientPhone = document.getElementById('clientPhone').value;
     var clientEmail = document.getElementById('clientEmail').value;
@@ -457,201 +249,37 @@ function previewQuote() {
     var customerId = document.getElementById('customerId').value || 'N/A';
     var depositPercent = document.getElementById('depositPercent').value || '30';
     var customNotes = document.getElementById('customNotes').value.trim();
-    
     var today = new Date();
     var quoteDate = today.toLocaleDateString('en-GB');
     var expiryDate = new Date(today.getTime() + 31 * 24 * 60 * 60 * 1000).toLocaleDateString('en-GB');
     var estNumber = String(estimateNumber).padStart(4, '0');
-    
-    var subtotal = 0;
-    for (var j = 0; j < items.length; j++) {
-        subtotal += items[j].lineTotal;
-    }
+    var subtotal = items.reduce(function(sum, item) { return sum + item.lineTotal; }, 0);
     var vat = subtotal * 0.20;
     var total = subtotal + vat;
-
-    // Sort items by category
     var sortedItems = sortItemsByCategory(items);
     var groupedItems = groupItemsByCategory(sortedItems);
+    var companyAddressLines = company.address ? company.address.split(',').join('<br>') : '';
 
-    var previewHtml = `
-    <style>
-      * { margin: 0; padding: 0; box-sizing: border-box; }
-      .estimate-container-preview { font-family: Arial, sans-serif; background: white; padding: 30px; max-width: 100%; }
-      .header-preview { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 30px; padding-bottom: 20px; border-bottom: 2px solid #333; }
-      .company-info-preview { flex: 1; }
-      .company-name-preview { font-size: 24px; font-weight: bold; margin-bottom: 10px; color: #333; }
-      .company-name-preview .highlight-preview { background: linear-gradient(135deg, #bc9c22, #d4af37); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
-      .company-details-preview { font-size: 11px; line-height: 1.6; color: #666; }
-      .logo-preview { width: 120px; height: auto; }
-      .estimate-banner-preview { background: linear-gradient(135deg, #bc9c22, #d4af37); padding: 15px 20px; margin-bottom: 25px; display: inline-block; font-weight: bold; font-size: 16px; color: white; }
-      .info-section-preview { display: flex; justify-content: space-between; margin-bottom: 30px; align-items: flex-start; gap: 100px; }
-      .client-info-preview { flex: 0 0 auto; }
-      .estimate-details-preview { flex: 0 0 auto; }
-      .info-row-preview { font-size: 13px; line-height: 2; display: flex; align-items: center; }
-      .info-label-preview { color: #333; font-weight: bold; margin-right: 10px; min-width: 80px; }
-      .info-value-preview { color: #333; font-weight: normal; }
-      .expiry-date-preview { background: linear-gradient(135deg, #bc9c22, #d4af37); padding: 5px 10px; display: inline-block; color: white; font-weight: normal; }
-      .items-table-preview { width: 100%; border-collapse: collapse; margin: 30px 0; }
-      .items-table-preview thead { background: #f5f5f5; }
-      .items-table-preview th { padding: 12px; text-align: left; font-size: 12px; font-weight: bold; color: #333; border-bottom: 2px solid #ddd; }
-      .items-table-preview th:nth-child(2), .items-table-preview th:nth-child(3), .items-table-preview th:nth-child(4) { text-align: right; width: 100px; }
-      .items-table-preview td { padding: 12px; font-size: 13px; border-bottom: 1px solid #eee; color: #333; }
-      .items-table-preview td:nth-child(2), .items-table-preview td:nth-child(3), .items-table-preview td:nth-child(4) { text-align: right; }
-      .category-row { background: #f9f9f9; font-weight: bold; color: #333; }
-      .category-row td { padding: 10px 12px; border-bottom: 2px solid #ddd; }
-      .notes-section-preview { margin: 30px 0; padding: 20px; background: #f9f9f9; border-left: 3px solid #bc9c22; }
-      .notes-section-preview h3 { font-size: 13px; margin-bottom: 10px; color: #333; }
-      .notes-section-preview ol { margin-left: 20px; font-size: 12px; line-height: 1.8; color: #666; }
-      .totals-section-preview { margin-top: 30px; display: flex; justify-content: flex-end; }
-      .totals-box-preview { width: 300px; }
-      .total-row-preview { display: flex; justify-content: space-between; padding: 10px 15px; font-size: 13px; }
-      .total-row-preview.subtotal { border-top: 1px solid #ddd; }
-      .total-row-preview.vat { color: #666; }
-      .total-row-preview.final { background: linear-gradient(135deg, #bc9c22, #d4af37); color: white; font-weight: bold; font-size: 16px; border-top: 2px solid #333; margin-top: 5px; }
-      .footer-note-preview { margin-top: 40px; padding-top: 20px; border-top: 1px solid #ddd; text-align: center; font-size: 11px; color: #666; font-style: italic; }
-      .thank-you-preview { margin-top: 15px; font-weight: bold; color: #333; font-size: 12px; }
-    </style>
-    <div class="estimate-container-preview">
-      <div class="header-preview">
-        <div class="company-info-preview">
-          <div class="company-name-preview">TR<span class="highlight-preview">A</span>DER BROTHERS LTD</div>
-          <div class="company-details-preview">
-            8 Craigour Terrace<br>
-            Edinburgh, EH17 7PB<br>
-            07979309957<br>
-            traderbrotherslimited@gmail.com
-          </div>
-        </div>
-        <div class="logo-container-preview">
-          <img src="https://github.com/infotraderbrothers-lgtm/traderbrothers-assets-logo/blob/main/Trader%20Brothers.png?raw=true" alt="Trader Brothers Logo" class="logo-preview">
-        </div>
-      </div>
-
-      <div class="estimate-banner-preview">Estimate for</div>
-
-      <div class="info-section-preview">
-        <div class="client-info-preview">
-          <div class="info-row-preview">
-            <span class="info-label-preview">Name:</span>
-            <span class="info-value-preview">${clientName}</span>
-          </div>
-          <div class="info-row-preview">
-            <span class="info-label-preview">Address:</span>
-            <span class="info-value-preview">${projectAddress}</span>
-          </div>
-          <div class="info-row-preview">
-            <span class="info-label-preview">Postcode:</span>
-            <span class="info-value-preview">${projectPostcode || 'N/A'}</span>
-          </div>
-          <div class="info-row-preview">
-            <span class="info-label-preview">Phone:</span>
-            <span class="info-value-preview">${clientPhone || 'N/A'}</span>
-          </div>
-          ${clientEmail ? `<div class="info-row-preview"><span class="info-label-preview">Email:</span><span class="info-value-preview">${clientEmail}</span></div>` : ''}
-        </div>
-
-        <div class="estimate-details-preview">
-          <div class="info-row-preview">
-            <span class="info-label-preview">Date:</span>
-            <span class="info-value-preview">${quoteDate}</span>
-          </div>
-          <div class="info-row-preview">
-            <span class="info-label-preview">Estimate #:</span>
-            <span class="info-value-preview">${estNumber}</span>
-          </div>
-          <div class="info-row-preview">
-            <span class="info-label-preview">Customer ID:</span>
-            <span class="info-value-preview">${customerId}</span>
-          </div>
-          <div class="info-row-preview">
-            <span class="info-label-preview">Expiry Date:</span>
-            <span class="expiry-date-preview">${expiryDate}</span>
-          </div>
-        </div>
-      </div>
-
-      <table class="items-table-preview">
-        <thead>
-          <tr>
-            <th>Description</th>
-            <th>Qty</th>
-            <th>Unit price</th>
-            <th>Total price</th>
-          </tr>
-        </thead>
-        <tbody>`;
-
-    // Render items grouped and sorted by category
-    categoryOrder.forEach(function(category) {
-        if (groupedItems[category]) {
-            previewHtml += `
-          <tr class="category-row">
-            <td colspan="4"><strong>${category}</strong></td>
-          </tr>`;
-            
-            groupedItems[category].forEach(function(item) {
-                previewHtml += `
-          <tr>
-            <td>${item.description}</td>
-            <td>${item.quantity}</td>
-            <td>£${item.unitPrice.toFixed(2)}</td>
-            <td>£${item.lineTotal.toFixed(2)}</td>
-          </tr>`;
+    var previewHtml = '<style>*{margin:0;padding:0;box-sizing:border-box}.est-prev{font-family:Arial,sans-serif;background:#fff;padding:30px}.hdr-prev{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:30px;padding-bottom:20px;border-bottom:2px solid #333}.co-info{flex:1}.co-name{font-size:24px;font-weight:bold;margin-bottom:10px;color:#333}.co-det{font-size:11px;line-height:1.6;color:#666}.logo-prev{width:120px;height:auto;max-height:80px;object-fit:contain}.est-ban{background:linear-gradient(135deg,#bc9c22,#d4af37);padding:15px 20px;margin-bottom:25px;display:inline-block;font-weight:bold;font-size:16px;color:#fff}.info-sec{display:flex;justify-content:space-between;margin-bottom:30px;gap:50px}.info-row{font-size:13px;line-height:2;display:flex}.info-lbl{color:#333;font-weight:bold;margin-right:10px;min-width:80px}.info-val{color:#333}.exp-date{background:linear-gradient(135deg,#bc9c22,#d4af37);padding:5px 10px;color:#fff}.items-tbl{width:100%;border-collapse:collapse;margin:30px 0}.items-tbl thead{background:#f5f5f5}.items-tbl th{padding:12px;text-align:left;font-size:12px;font-weight:bold;color:#333;border-bottom:2px solid #ddd}.items-tbl th:nth-child(2),.items-tbl th:nth-child(3),.items-tbl th:nth-child(4){text-align:right;width:100px}.items-tbl td{padding:12px;font-size:13px;border-bottom:1px solid #eee;color:#333}.items-tbl td:nth-child(2),.items-tbl td:nth-child(3),.items-tbl td:nth-child(4){text-align:right}.cat-row{background:#f9f9f9;font-weight:bold}.cat-row td{padding:10px 12px;border-bottom:2px solid #ddd}.notes-sec{margin:30px 0;padding:20px;background:#f9f9f9;border-left:3px solid #bc9c22}.notes-sec h3{font-size:13px;margin-bottom:10px;color:#333}.notes-sec ol{margin-left:20px;font-size:12px;line-height:1.8;color:#666}.totals-sec{margin-top:30px;display:flex;justify-content:flex-end}.totals-box{width:300px}.tot-row{display:flex;justify-content:space-between;padding:10px 15px;font-size:13px}.tot-row.sub{border-top:1px solid #ddd}.tot-row.vat{color:#666}.tot-row.final{background:linear-gradient(135deg,#bc9c22,#d4af37);color:#fff;font-weight:bold;font-size:16px;margin-top:5px}.footer-note{margin-top:40px;padding-top:20px;border-top:1px solid #ddd;text-align:center;font-size:11px;color:#666;font-style:italic}.thank-you{margin-top:15px;font-weight:bold;color:#333;font-size:12px}</style>';
+    previewHtml += '<div class="est-prev"><div class="hdr-prev"><div class="co-info"><div class="co-name">' + company.companyName + '</div><div class="co-det">' + companyAddressLines + '<br>' + company.phone + '<br>' + company.email + '</div></div>' + (company.logo ? '<img src="' + company.logo + '" class="logo-prev">' : '') + '</div>';
+    previewHtml += '<div class="est-ban">Estimate for</div><div class="info-sec"><div><div class="info-row"><span class="info-lbl">Name:</span><span class="info-val">' + clientName + '</span></div><div class="info-row"><span class="info-lbl">Address:</span><span class="info-val">' + projectAddress + '</span></div><div class="info-row"><span class="info-lbl">Postcode:</span><span class="info-val">' + (projectPostcode || 'N/A') + '</span></div><div class="info-row"><span class="info-lbl">Phone:</span><span class="info-val">' + (clientPhone || 'N/A') + '</span></div>' + (clientEmail ? '<div class="info-row"><span class="info-lbl">Email:</span><span class="info-val">' + clientEmail + '</span></div>' : '') + '</div>';
+    previewHtml += '<div><div class="info-row"><span class="info-lbl">Date:</span><span class="info-val">' + quoteDate + '</span></div><div class="info-row"><span class="info-lbl">Estimate #:</span><span class="info-val">' + estNumber + '</span></div><div class="info-row"><span class="info-lbl">Customer ID:</span><span class="info-val">' + customerId + '</span></div><div class="info-row"><span class="info-lbl">Expiry:</span><span class="exp-date">' + expiryDate + '</span></div></div></div>';
+    previewHtml += '<table class="items-tbl"><thead><tr><th>Description</th><th>Qty</th><th>Unit price</th><th>Total</th></tr></thead><tbody>';
+    categoryOrder.forEach(function(cat) {
+        if (groupedItems[cat]) {
+            previewHtml += '<tr class="cat-row"><td colspan="4"><strong>' + cat + '</strong></td></tr>';
+            groupedItems[cat].forEach(function(item) {
+                previewHtml += '<tr><td>' + item.description + '</td><td>' + item.quantity + '</td><td>Â£' + item.unitPrice.toFixed(2) + '</td><td>Â£' + item.lineTotal.toFixed(2) + '</td></tr>';
             });
         }
     });
-
-    previewHtml += `
-        </tbody>
-      </table>
-
-     <div class="notes-section-preview">
-       <h3>Notes:</h3>
-       <ol>
-         <li>Estimate valid for 31 days</li>
-         <li>Payment of ${depositPercent}% is required to secure start date</li>
-         <li>Parking to be supplied by customer</li>
-         <li>Any extras to be charged accordingly</li>
-      </ol>
-     ${customNotes ? '<div style="margin-top: 15px; font-size: 12px; line-height: 1.8; color: #666;"><strong>Additional Notes:</strong><br>' + customNotes.replace(/\n/g, '<br>') + '</div>' : ''}
-   </div>
-   
-      <div class="totals-section-preview">
-        <div class="totals-box-preview">
-          <div class="total-row-preview subtotal">
-            <span>Subtotal</span>
-            <span>£${subtotal.toFixed(2)}</span>
-          </div>
-          <div class="total-row-preview vat">
-            <span>VAT</span>
-            <span>£${vat.toFixed(2)}</span>
-          </div>
-          <div class="total-row-preview final">
-            <span>Total</span>
-            <span>£${total.toFixed(2)}</span>
-          </div>
-         </div>
-        </div>
-
-      <div class="footer-note-preview">
-        If you have any questions about this estimate, please contact<br>
-        traderbrotherslimited@gmail.com, or 07931 810557
-        <div class="thank-you-preview">Thank you for your business</div>
-      </div>
-    </div>`;
-
+    previewHtml += '</tbody></table>';
+    previewHtml += '<div class="notes-sec"><h3>Notes:</h3><ol><li>Estimate valid for 31 days</li><li>Payment of ' + depositPercent + '% required to secure start date</li><li>Parking to be supplied by customer</li><li>Any extras charged accordingly</li></ol>' + (customNotes ? '<div style="margin-top:15px;font-size:12px;line-height:1.8;color:#666"><strong>Additional Notes:</strong><br>' + customNotes.replace(/\n/g, '<br>') + '</div>' : '') + '</div>';
+    previewHtml += '<div class="totals-sec"><div class="totals-box"><div class="tot-row sub"><span>Subtotal</span><span>Â£' + subtotal.toFixed(2) + '</span></div><div class="tot-row vat"><span>VAT</span><span>Â£' + vat.toFixed(2) + '</span></div><div class="tot-row final"><span>Total</span><span>Â£' + total.toFixed(2) + '</span></div></div></div>';
+    previewHtml += '<div class="footer-note">Questions? Contact ' + company.email + (company.phone ? ' or ' + company.phone : '') + '<div class="thank-you">Thank you for your business</div></div></div>';
     document.getElementById('previewBody').innerHTML = previewHtml;
     document.getElementById('previewModal').style.display = 'block';
 }
 
-function closePreview() {
-    document.getElementById('previewModal').style.display = 'none';
-}
-
-window.onclick = function(event) {
-    var modal = document.getElementById('previewModal');
-    if (event.target == modal) {
-        closePreview();
-    }
-};
+function closePreview() { document.getElementById('previewModal').style.display = 'none'; }
+window.onclick = function(e) { if (e.target == document.getElementById('previewModal')) closePreview(); };
