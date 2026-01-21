@@ -1,7 +1,7 @@
 {
-  "name": "Trader Brothers Quotation Tool",
-  "short_name": "TB Quotes",
-  "description": "Professional quotation and estimation tool for Trader Brothers Ltd",
+  "name": "OMEGA Professional Business Tools",
+  "short_name": "OMEGA",
+  "description": "Professional quotation and invoicing tool for tradesmen",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#1a1a1a",
