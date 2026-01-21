@@ -9,7 +9,7 @@ const WEBHOOK_CONFIG = {
     STORE_AND_EMAIL: 'https://hook.eu1.make.com/ohdm5yreraugif6kdck4bj7oo8y62g67',
     
     // Webhook #2: Verifies passcode entered by user
-    VERIFY_PASSCODE: 'YOUR_MAKE_COM_WEBHOOK_2_URL',
+    VERIFY_PASSCODE: 'https://hook.eu1.make.com/8et2d1wlqf8avecki8x6q9uci9o3sqxf',
     
     // Webhook #3: Stores new user registration data
     REGISTER_USER: 'YOUR_MAKE_COM_WEBHOOK_3_URL',
