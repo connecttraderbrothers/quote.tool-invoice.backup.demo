@@ -1,8 +1,37 @@
 // PDFShift API Configuration
 const PDFSHIFT_API_KEY = 'sk_baa46c861371ec5f60ab2e83221fdac1ccce517b';
 
+// Get user data for personalised documents
+function getUserCompanyData() {
+    const userData = window.omegaUserData;
+    
+    if (userData) {
+        return {
+            companyName: userData.companyName || 'Your Company',
+            address: userData.address || '',
+            phone: userData.phone || '',
+            email: userData.email || '',
+            logo: userData.logo || null,
+            bankDetails: userData.bankDetails || null
+        };
+    }
+    
+    // Fallback to default (shouldn't happen if auth is working)
+    return {
+        companyName: 'Your Company',
+        address: '',
+        phone: '',
+        email: '',
+        logo: null,
+        bankDetails: null
+    };
+}
+
 // Generate complete HTML for PDF conversion
 function generateCompleteHTML() {
+    // Get user's company data
+    const company = getUserCompanyData();
+    
     var clientName = document.getElementById('clientName').value || '[Client Name]';
     var clientPhone = document.getElementById('clientPhone').value;
     var clientEmail = document.getElementById('clientEmail').value;
@@ -27,6 +56,12 @@ function generateCompleteHTML() {
     // Sort items by category
     var sortedItems = sortItemsByCategory(items);
     var groupedItems = groupItemsByCategory(sortedItems);
+
+    // Format address for display
+    var companyAddressLines = company.address.split('\n').join('<br>');
+    if (!companyAddressLines) {
+        companyAddressLines = company.address.split(',').join('<br>');
+    }
 
     var styles = `
     <style>
@@ -78,6 +113,8 @@ function generateCompleteHTML() {
       .logo {
         width: 120px;
         height: auto;
+        max-height: 80px;
+        object-fit: contain;
       }
       .estimate-banner {
         background: linear-gradient(135deg, #bc9c22, #d4af37);
@@ -243,16 +280,18 @@ function generateCompleteHTML() {
     <div class="estimate-container">
       <div class="header">
         <div class="company-info">
-          <div class="company-name">TR<span class="highlight">A</span>DER BROTHERS LTD</div>
+          <div class="company-name">${company.companyName}</div>
           <div class="company-details">
-            8 Craigour Terrace<br>
-            Edinburgh, EH17 7PB<br>
-            07931 810557<br>
-            traderbrotherslimited@gmail.com
+            ${companyAddressLines}<br>
+            ${company.phone}<br>
+            ${company.email}
           </div>
         </div>
         <div class="logo-container">
-          <img src="https://github.com/infotraderbrothers-lgtm/traderbrothers-assets-logo/blob/main/Trader%20Brothers.png?raw=true" alt="Trader Brothers Logo" class="logo">
+          ${company.logo 
+            ? `<img src="${company.logo}" alt="${company.companyName} Logo" class="logo">`
+            : ''
+          }
         </div>
       </div>
 
@@ -323,8 +362,8 @@ function generateCompleteHTML() {
           <tr>
             <td>${item.description}</td>
             <td>${item.quantity}</td>
-            <td>£${item.unitPrice.toFixed(2)}</td>
-            <td>£${item.lineTotal.toFixed(2)}</td>
+            <td>Â£${item.unitPrice.toFixed(2)}</td>
+            <td>Â£${item.lineTotal.toFixed(2)}</td>
           </tr>`;
             });
         }
@@ -349,22 +388,22 @@ function generateCompleteHTML() {
         <div class="totals-box">
           <div class="total-row subtotal">
             <span>Subtotal</span>
-            <span>£${subtotal.toFixed(2)}</span>
+            <span>Â£${subtotal.toFixed(2)}</span>
           </div>
           <div class="total-row vat">
             <span>VAT</span>
-            <span>£${vat.toFixed(2)}</span>
+            <span>Â£${vat.toFixed(2)}</span>
           </div>
           <div class="total-row final">
             <span>Total</span>
-            <span>£${total.toFixed(2)}</span>
+            <span>Â£${total.toFixed(2)}</span>
           </div>
         </div>
       </div>
 
       <div class="footer-note">
         If you have any questions about this estimate, please contact<br>
-        us at traderbrotherslimited@gmail.com, or 07931 810557 
+        us at ${company.email}${company.phone ? ', or ' + company.phone : ''}
         <div class="thank-you">Thank you for your business</div>
       </div>
     </div>`;
@@ -374,7 +413,7 @@ function generateCompleteHTML() {
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Estimate - Trader Brothers Ltd</title>
+  <title>Estimate - ${company.companyName}</title>
   ${styles}
 </head>
 <body>
@@ -476,7 +515,7 @@ async function downloadQuote() {
         updateEstimateCounter();
 
         setTimeout(function() {
-            alert('✓ PDF downloaded successfully!\n\nFile: ' + filename);
+            alert('âœ“ PDF downloaded successfully!\n\nFile: ' + filename);
         }, 200);
 
     } catch (error) {
@@ -487,9 +526,9 @@ async function downloadQuote() {
         if (error.message.includes('Failed to fetch') || error.message.includes('NetworkError')) {
             errorMessage += 'Network Error - Cannot connect to PDFShift API.\n\n';
             errorMessage += 'Please check:\n';
-            errorMessage += '• Your internet connection\n';
-            errorMessage += '• Firewall or browser extensions blocking the request\n';
-            errorMessage += '• Try using a different browser\n\n';
+            errorMessage += 'â€¢ Your internet connection\n';
+            errorMessage += 'â€¢ Firewall or browser extensions blocking the request\n';
+            errorMessage += 'â€¢ Try using a different browser\n\n';
             errorMessage += 'Technical details are in the console (press F12)';
         } else {
             errorMessage += error.message;
