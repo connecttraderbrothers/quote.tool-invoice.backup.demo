@@ -191,7 +191,7 @@ body {
 }
 
 .tool-features li::before {
-    content: '✓';
+    content: 'âœ“';
     position: absolute;
     left: 0;
     color: #fbbf24;
