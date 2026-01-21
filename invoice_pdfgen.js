@@ -1,11 +1,50 @@
 // Invoice Preview and PDF Generation Functions
-// This file handles the preview modal and PDF generation for invoices
+// Updated with user data integration for personalised invoices
+
+// Get user data for personalised documents
+function getInvoiceCompanyData() {
+    const userData = window.omegaUserData;
+    
+    if (userData) {
+        return {
+            companyName: userData.companyName || 'Your Company',
+            address: userData.address || '',
+            phone: userData.phone || '',
+            email: userData.email || '',
+            logo: userData.logo || null,
+            bankDetails: userData.bankDetails || {
+                bankName: '',
+                accountName: '',
+                sortCode: '',
+                accountNumber: ''
+            }
+        };
+    }
+    
+    // Fallback to default
+    return {
+        companyName: 'Your Company',
+        address: '',
+        phone: '',
+        email: '',
+        logo: null,
+        bankDetails: {
+            bankName: '',
+            accountName: '',
+            sortCode: '',
+            accountNumber: ''
+        }
+    };
+}
 
 function previewInvoice() {
     if (editingInvoiceIndex >= 0) {
         alert('Please save or cancel your current edit first');
         return;
     }
+    
+    // Get user's company data
+    const company = getInvoiceCompanyData();
     
     var clientName = document.getElementById('invoiceClientName').value || '[Client Name]';
     var clientPhone = document.getElementById('invoiceClientPhone').value;
@@ -44,6 +83,12 @@ function previewInvoice() {
     var sortedItems = sortInvoiceItemsByCategory(invoiceItems);
     var groupedItems = groupInvoiceItemsByCategory(sortedItems);
 
+    // Format address for display
+    var companyAddressLines = company.address.split('\n').join('<br>');
+    if (!companyAddressLines || companyAddressLines === company.address) {
+        companyAddressLines = company.address.split(',').join('<br>');
+    }
+
     var previewHtml = `
     <style>
       * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -51,9 +96,8 @@ function previewInvoice() {
       .header-preview { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 30px; padding-bottom: 20px; border-bottom: 2px solid #333; }
       .company-info-preview { flex: 1; }
       .company-name-preview { font-size: 24px; font-weight: bold; margin-bottom: 10px; color: #333; }
-      .company-name-preview .highlight-preview { background: linear-gradient(135deg, #bc9c22, #d4af37); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
       .company-details-preview { font-size: 11px; line-height: 1.6; color: #666; }
-      .logo-preview { width: 120px; height: auto; }
+      .logo-preview { width: 120px; height: auto; max-height: 80px; object-fit: contain; }
       .invoice-banner-preview { background: linear-gradient(135deg, #bc9c22, #d4af37); padding: 15px 20px; margin-bottom: 25px; display: inline-block; font-weight: bold; font-size: 16px; color: white; }
       .info-section-preview { display: flex; justify-content: space-between; margin-bottom: 30px; align-items: flex-start; gap: 100px; }
       .client-info-preview { flex: 0 0 auto; }
@@ -89,16 +133,18 @@ function previewInvoice() {
     <div class="invoice-container-preview">
       <div class="header-preview">
         <div class="company-info-preview">
-          <div class="company-name-preview">TR<span class="highlight-preview">A</span>DER BROTHERS LTD</div>
+          <div class="company-name-preview">${company.companyName}</div>
           <div class="company-details-preview">
-            8 Craigour Terrace<br>
-            Edinburgh, EH17 7PB<br>
-            07979309957<br>
-            traderbrotherslimited@gmail.com
+            ${companyAddressLines}<br>
+            ${company.phone}<br>
+            ${company.email}
           </div>
         </div>
         <div class="logo-container-preview">
-          <img src="https://github.com/infotraderbrothers-lgtm/traderbrothers-assets-logo/blob/main/Trader%20Brothers.png?raw=true" alt="Trader Brothers Logo" class="logo-preview">
+          ${company.logo 
+            ? `<img src="${company.logo}" alt="${company.companyName} Logo" class="logo-preview">`
+            : ''
+          }
         </div>
       </div>
 
@@ -172,8 +218,8 @@ function previewInvoice() {
           <tr>
             <td>${item.description}</td>
             <td>${item.quantity}</td>
-            <td>£${item.unitPrice.toFixed(2)}</td>
-            <td>£${item.lineTotal.toFixed(2)}</td>
+            <td>Â£${item.unitPrice.toFixed(2)}</td>
+            <td>Â£${item.lineTotal.toFixed(2)}</td>
           </tr>`;
             });
         }
@@ -192,32 +238,32 @@ function previewInvoice() {
       <div class="bottom-section-preview">
         <div class="bank-details-preview" style="flex: 1;">
           <h3>Bank Details:</h3>
-          <p><strong>Account Name:</strong> Trader Brothers Ltd</p>
-          <p><strong>Sort Code:</strong> 04-06-05</p>
-          <p><strong>Account Number:</strong> 24049254</p>
+          <p><strong>Account Name:</strong> ${company.bankDetails.accountName || 'N/A'}</p>
+          <p><strong>Sort Code:</strong> ${company.bankDetails.sortCode || 'N/A'}</p>
+          <p><strong>Account Number:</strong> ${company.bankDetails.accountNumber || 'N/A'}</p>
         </div>
 
         <div class="totals-section-preview" style="flex: 0 0 auto;">
           <div class="totals-box-preview">
             <div class="total-row-preview subtotal">
               <span>Subtotal</span>
-              <span>£${subtotal.toFixed(2)}</span>
+              <span>Â£${subtotal.toFixed(2)}</span>
             </div>
             <div class="total-row-preview vat">
               <span>VAT (20%)</span>
-              <span>£${vat.toFixed(2)}</span>
+              <span>Â£${vat.toFixed(2)}</span>
             </div>
             <div class="total-row-preview subtotal">
               <span>Total</span>
-              <span>£${total.toFixed(2)}</span>
+              <span>Â£${total.toFixed(2)}</span>
             </div>
             ${deduction > 0 ? `<div class="total-row-preview vat">
               <span>Deduction</span>
-              <span>-£${deduction.toFixed(2)}</span>
+              <span>-Â£${deduction.toFixed(2)}</span>
             </div>` : ''}
             <div class="total-row-preview final">
               <span>Amount Due</span>
-              <span>£${amountDue.toFixed(2)}</span>
+              <span>Â£${amountDue.toFixed(2)}</span>
             </div>
           </div>
         </div>
@@ -225,7 +271,7 @@ function previewInvoice() {
 
       <div class="footer-note-preview">
         If you have any questions about this invoice, please contact<br>
-        us at traderbrotherslimited@gmail.com on 07931 810557
+        us at ${company.email}${company.phone ? ' or ' + company.phone : ''}
         <div class="thank-you-preview">Thank you for your business</div>
       </div>
     </div>`;
@@ -320,7 +366,7 @@ function downloadInvoice() {
             updateInvoiceCounter();
 
             setTimeout(function() {
-                alert('✓ Invoice PDF downloaded successfully!\n\nFile: ' + filename);
+                alert('âœ“ Invoice PDF downloaded successfully!\n\nFile: ' + filename);
             }, 200);
         })
         .catch(function(error) {
@@ -331,9 +377,9 @@ function downloadInvoice() {
             if (error.message.includes('Failed to fetch') || error.message.includes('NetworkError')) {
                 errorMessage += 'Network Error - Cannot connect to PDFShift API.\n\n';
                 errorMessage += 'Please check:\n';
-                errorMessage += '• Your internet connection\n';
-                errorMessage += '• Firewall or browser extensions blocking the request\n';
-                errorMessage += '• Try using a different browser\n\n';
+                errorMessage += 'â€¢ Your internet connection\n';
+                errorMessage += 'â€¢ Firewall or browser extensions blocking the request\n';
+                errorMessage += 'â€¢ Try using a different browser\n\n';
                 errorMessage += 'Technical details are in the console (press F12)';
             } else {
                 errorMessage += error.message;
@@ -355,6 +401,9 @@ function downloadInvoice() {
 }
 
 function generateInvoiceHTML() {
+    // Get user's company data
+    const company = getInvoiceCompanyData();
+    
     var clientName = document.getElementById('invoiceClientName').value || '[Client Name]';
     var clientPhone = document.getElementById('invoiceClientPhone').value;
     var clientEmail = document.getElementById('invoiceClientEmail').value;
@@ -396,6 +445,12 @@ function generateInvoiceHTML() {
         statusBadge = 'UNPAID';
     }
 
+    // Format address for display
+    var companyAddressLines = company.address.split('\n').join('<br>');
+    if (!companyAddressLines || companyAddressLines === company.address) {
+        companyAddressLines = company.address.split(',').join('<br>');
+    }
+
     var styles = `
     <style>
       * {
@@ -432,12 +487,6 @@ function generateInvoiceHTML() {
         margin-bottom: 10px;
         color: #333;
       }
-      .company-name .highlight {
-        background: linear-gradient(135deg, #bc9c22, #d4af37);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        background-clip: text;
-      }
       .company-details {
         font-size: 11px;
         line-height: 1.6;
@@ -446,6 +495,8 @@ function generateInvoiceHTML() {
       .logo {
         width: 120px;
         height: auto;
+        max-height: 80px;
+        object-fit: contain;
       }
       .invoice-header-section {
         display: flex;
@@ -649,16 +700,18 @@ function generateInvoiceHTML() {
     <div class="invoice-container">
       <div class="header">
         <div class="company-info">
-          <div class="company-name">TR<span class="highlight">A</span>DER BROTHERS LTD</div>
+          <div class="company-name">${company.companyName}</div>
           <div class="company-details">
-            8 Craigour Terrace<br>
-            Edinburgh, EH17 7PB<br>
-            07931 810557<br>
-            traderbrotherslimited@gmail.com
+            ${companyAddressLines}<br>
+            ${company.phone}<br>
+            ${company.email}
           </div>
         </div>
         <div class="logo-container">
-          <img src="https://github.com/infotraderbrothers-lgtm/traderbrothers-assets-logo/blob/main/Trader%20Brothers.png?raw=true" alt="Trader Brothers Logo" class="logo">
+          ${company.logo 
+            ? `<img src="${company.logo}" alt="${company.companyName} Logo" class="logo">`
+            : ''
+          }
         </div>
       </div>
 
@@ -732,8 +785,8 @@ function generateInvoiceHTML() {
           <tr>
             <td>${item.description}</td>
             <td>${item.quantity}</td>
-            <td>£${item.unitPrice.toFixed(2)}</td>
-            <td>£${item.lineTotal.toFixed(2)}</td>
+            <td>Â£${item.unitPrice.toFixed(2)}</td>
+            <td>Â£${item.lineTotal.toFixed(2)}</td>
           </tr>`;
             });
         }
@@ -752,32 +805,32 @@ function generateInvoiceHTML() {
       <div class="bottom-section">
         <div class="bank-details">
           <h3>Bank Details:</h3>
-          <p><strong>Account Name:</strong> Trader Brothers Ltd</p>
-          <p><strong>Sort Code:</strong> 04-06-05</p>
-          <p><strong>Account Number:</strong> 24049254</p>
+          <p><strong>Account Name:</strong> ${company.bankDetails.accountName || 'N/A'}</p>
+          <p><strong>Sort Code:</strong> ${company.bankDetails.sortCode || 'N/A'}</p>
+          <p><strong>Account Number:</strong> ${company.bankDetails.accountNumber || 'N/A'}</p>
         </div>
 
         <div class="totals-section">
           <div class="totals-box">
             <div class="total-row subtotal">
               <span>Subtotal</span>
-              <span>£${subtotal.toFixed(2)}</span>
+              <span>Â£${subtotal.toFixed(2)}</span>
             </div>
             <div class="total-row vat">
               <span>VAT (20%)</span>
-              <span>£${vat.toFixed(2)}</span>
+              <span>Â£${vat.toFixed(2)}</span>
             </div>
             <div class="total-row subtotal">
               <span>Total</span>
-              <span>£${total.toFixed(2)}</span>
+              <span>Â£${total.toFixed(2)}</span>
             </div>
             ${deduction > 0 ? `<div class="total-row vat">
               <span>Deduction</span>
-              <span>-£${deduction.toFixed(2)}</span>
+              <span>-Â£${deduction.toFixed(2)}</span>
             </div>` : ''}
             <div class="total-row final">
               <span>Amount Due</span>
-              <span>£${amountDue.toFixed(2)}</span>
+              <span>Â£${amountDue.toFixed(2)}</span>
             </div>
           </div>
         </div>
@@ -785,7 +838,7 @@ function generateInvoiceHTML() {
 
       <div class="footer-note">
         If you have any questions about this invoice, please contact<br>
-        us at traderbrotherslimited@gmail.com, or 07931 810557 
+        us at ${company.email}${company.phone ? ', or ' + company.phone : ''}
         <div class="thank-you">Thank you for your business</div>
       </div>
     </div>`;
@@ -795,7 +848,7 @@ function generateInvoiceHTML() {
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Invoice - Trader Brothers Ltd</title>
+  <title>Invoice - ${company.companyName}</title>
   ${styles}
 </head>
 <body>
