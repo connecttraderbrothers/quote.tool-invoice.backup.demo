@@ -4,20 +4,17 @@
     padding: 0;
     box-sizing: border-box;
 }
-
 body {
     font-family: Arial, sans-serif;
     background: #000;
     overflow: hidden;
 }
-
 canvas {
     position: fixed;
     top: 0;
     left: 0;
     z-index: 1;
 }
-
 .splash-container {
     position: fixed;
     top: 0;
@@ -31,7 +28,6 @@ canvas {
     z-index: 2;
     animation: fadeIn 0.5s ease-in;
 }
-
 @keyframes fadeIn {
     from {
         opacity: 0;
@@ -40,14 +36,12 @@ canvas {
         opacity: 1;
     }
 }
-
 .logo-wrapper {
     margin-bottom: 30px;
     animation: logoFloat 2s ease-in-out infinite;
     position: relative;
     z-index: 3;
 }
-
 @keyframes logoFloat {
     0%, 100% {
         transform: translateY(0px);
@@ -56,14 +50,12 @@ canvas {
         transform: translateY(-10px);
     }
 }
-
 .splash-logo {
     width: 120px;
     height: 120px;
     border-radius: 20px;
     box-shadow: 0 10px 40px rgba(251, 191, 36, 0.5);
 }
-
 .company-name {
     font-size: 48px;
     font-weight: bold;
@@ -77,7 +69,6 @@ canvas {
     filter: drop-shadow(0 0 20px rgba(251, 191, 36, 0.8));
     z-index: 3;
 }
-
 @keyframes slideIn {
     from {
         opacity: 0;
@@ -88,7 +79,6 @@ canvas {
         transform: translateY(0);
     }
 }
-
 @keyframes shine {
     0%, 100% {
         filter: drop-shadow(0 0 20px rgba(251, 191, 36, 0.8)) brightness(1);
@@ -97,7 +87,6 @@ canvas {
         filter: drop-shadow(0 0 30px rgba(251, 191, 36, 1)) brightness(1.2);
     }
 }
-
 .tagline {
     font-size: 16px;
     background: linear-gradient(135deg, #fbbf24, #f59e0b);
@@ -109,7 +98,6 @@ canvas {
     filter: drop-shadow(0 0 10px rgba(251, 191, 36, 0.6));
     z-index: 3;
 }
-
 .loading-bar {
     width: 250px;
     height: 4px;
@@ -118,7 +106,6 @@ canvas {
     overflow: hidden;
     z-index: 3;
 }
-
 .loading-progress {
     height: 100%;
     background: linear-gradient(90deg, #fbbf24, #f59e0b);
@@ -126,7 +113,6 @@ canvas {
     animation: loading 3s ease-in-out forwards;
     box-shadow: 0 0 10px rgba(251, 191, 36, 0.8);
 }
-
 @keyframes loading {
     from {
         width: 0%;
@@ -135,7 +121,6 @@ canvas {
         width: 100%;
     }
 }
-
 .enter-button {
     margin-top: 30px;
     padding: 15px 40px;
@@ -153,17 +138,14 @@ canvas {
     z-index: 3;
     letter-spacing: 1px;
 }
-
 .enter-button:hover {
     transform: scale(1.05);
     box-shadow: 0 0 30px rgba(251, 191, 36, 0.8);
     background: linear-gradient(135deg, #f59e0b, #fbbf24);
 }
-
 .enter-button:active {
     transform: scale(0.98);
 }
-
 @keyframes fadeInButton {
     from {
         opacity: 0;
@@ -174,11 +156,9 @@ canvas {
         transform: translateY(0);
     }
 }
-
 .fade-out {
     animation: fadeOut 0.8s ease-out forwards;
 }
-
 @keyframes fadeOut {
     from {
         opacity: 1;
@@ -187,7 +167,6 @@ canvas {
         opacity: 0;
     }
 }
-
 @media (max-width: 768px) {
     .splash-logo {
         width: 100px;
@@ -205,7 +184,6 @@ canvas {
     .loading-bar {
         width: 200px;
     }
-
     .enter-button {
         font-size: 14px;
         padding: 12px 30px;
