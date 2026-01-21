@@ -6,7 +6,7 @@
 // ============================================
 const WEBHOOK_CONFIG = {
     // Webhook #1: Stores passcode and sends email to user
-    STORE_AND_EMAIL: 'YOUR_MAKE_COM_WEBHOOK_1_URL',
+    STORE_AND_EMAIL: 'https://hook.eu1.make.com/ohdm5yreraugif6kdck4bj7oo8y62g67',
     
     // Webhook #2: Verifies passcode entered by user
     VERIFY_PASSCODE: 'YOUR_MAKE_COM_WEBHOOK_2_URL',
