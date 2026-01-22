@@ -12,10 +12,10 @@ const WEBHOOK_CONFIG = {
     VERIFY_PASSCODE: 'https://hook.eu1.make.com/8et2d1wlqf8avecki8x6q9uci9o3sqxf',
     
     // Webhook #3: Stores new user registration data
-    REGISTER_USER: 'YOUR_MAKE_COM_WEBHOOK_3_URL',
+    REGISTER_USER: 'https://hook.eu1.make.com/fcanehdltyyrdxspj0y6ssavhkao8gdv',
     
     // Webhook #4: Retrieves user data on login
-    GET_USER_DATA: 'YOUR_MAKE_COM_WEBHOOK_4_URL'
+    GET_USER_DATA: 'https://hook.eu1.make.com/ck0c68qcw69edyx9a84ahfw74lfmjf6w'
 };
 
 // ============================================
