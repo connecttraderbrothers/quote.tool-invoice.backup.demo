@@ -25,14 +25,20 @@ function enterMatrix() {
     splashScreen.classList.add('fade-out');
     
     // After fade-out animation completes
-    setTimeout(function() {
+    setTimeout(async function() {
         splashScreen.style.display = 'none';
         
-        // Check if user is already authenticated
-        const isLoggedIn = initAuth();
+        // Show a loading state while checking auth
+        authScreen.style.display = 'block';
+        authScreen.style.opacity = '1';
+        authScreen.innerHTML = '<div style="display: flex; justify-content: center; align-items: center; height: 100vh; background: #1a1a1a;"><div style="text-align: center; color: white;"><div class="auth-spinner" style="width: 40px; height: 40px; border: 3px solid rgba(251,191,36,0.3); border-top-color: #fbbf24; border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto 20px;"></div><p style="color: #fbbf24;">Loading your account...</p></div></div><style>@keyframes spin { to { transform: rotate(360deg); } }</style>';
+        
+        // Check if user is already authenticated (now async - fetches from database)
+        const isLoggedIn = await initAuth();
         
         if (isLoggedIn) {
             // User is logged in - go straight to dashboard
+            authScreen.style.display = 'none';
             dashboardScreen.style.display = 'block';
             dashboardScreen.style.opacity = '0';
             
