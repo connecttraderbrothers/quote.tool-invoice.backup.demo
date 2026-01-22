@@ -28,6 +28,7 @@ let authState = {
     email: '',
     passcode: '',
     userId: '',
+    pendingUserId: '', // Generated in Webhook #1, used throughout auth flow
     userData: null,
     isLoading: false,
     errors: {},
@@ -256,10 +257,10 @@ function generateUserId() {
 }
 
 // Webhook #1: Send passcode for storage and email
-async function sendPasscodeToWebhook(email, passcode) {
+async function sendPasscodeToWebhook(email, passcode, userId) {
     try {
         // For demo/testing - remove in production
-        console.log('📧 Passcode for', email, ':', passcode);
+        console.log('📧 Passcode for', email, ':', passcode, 'userId:', userId);
         
         const response = await fetch(WEBHOOK_CONFIG.STORE_AND_EMAIL, {
             method: 'POST',
@@ -267,6 +268,7 @@ async function sendPasscodeToWebhook(email, passcode) {
             body: JSON.stringify({
                 email: email,
                 passcode: passcode,
+                userId: userId,
                 timestamp: new Date().toISOString(),
                 expiresIn: 300 // 5 minutes
             })
@@ -366,9 +368,12 @@ async function handleSendPasscode(email) {
     renderAuthScreen();
     
     const passcode = generatePasscode();
-    authState.passcode = passcode; // Store for demo verification
+    const userId = generateUserId();
     
-    const success = await sendPasscodeToWebhook(email, passcode);
+    authState.passcode = passcode; // Store for demo verification
+    authState.pendingUserId = userId; // Store userId for use in signup/login
+    
+    const success = await sendPasscodeToWebhook(email, passcode, userId);
     
     authState.isLoading = false;
     
@@ -407,12 +412,18 @@ async function handleVerifyPasscode() {
     authState.isLoading = false;
     
     if (result.valid) {
-        if (authState.currentView === 'verify' && authState.signupStep === 3) {
-            // Complete signup
-            await completeSignup(result.userId);
+        // Check if this is the final step of signup (after Step 3)
+        if (authState.signupStep === 3) {
+            // User just completed Step 3 and verified - complete signup
+            await completeSignup();
+        } else if (result.isNewUser) {
+            // New user from login - start signup flow
+            authState.signupStep = 1;
+            authState.currentView = 'signup-step1';
+            renderAuthScreen();
         } else {
-            // Complete login
-            await completeLogin(result.userId);
+            // Returning user - complete login using pendingUserId from Webhook #1
+            await completeLogin(authState.pendingUserId);
         }
     } else {
         let errorMessage = 'Invalid passcode. Please try again.';
@@ -431,8 +442,9 @@ async function handleVerifyPasscode() {
     }
 }
 
-async function completeSignup(userIdFromWebhook) {
-    const userId = userIdFromWebhook || generateUserId();
+async function completeSignup() {
+    // Use the userId generated in Webhook #1
+    const userId = authState.pendingUserId;
     
     const fullUserData = {
         userId: userId,
@@ -445,7 +457,7 @@ async function completeSignup(userIdFromWebhook) {
     
     if (result.success) {
         // Store only session info locally (not full user data)
-        localStorage.setItem('omegaUserId', result.userId || userId);
+        localStorage.setItem('omegaUserId', userId);
         localStorage.setItem('omegaUserEmail', signupData.businessEmail);
         localStorage.setItem('omegaAuthenticated', 'true');
         
@@ -454,7 +466,7 @@ async function completeSignup(userIdFromWebhook) {
         }
         
         authState.isAuthenticated = true;
-        authState.userId = result.userId || userId;
+        authState.userId = userId;
         authState.userData = fullUserData;
         
         // Update global user data for quotes/invoices
