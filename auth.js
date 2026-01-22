@@ -6,16 +6,16 @@
 // ============================================
 const WEBHOOK_CONFIG = {
     // Webhook #1: Stores passcode and sends email to user
-    STORE_AND_EMAIL: 'https://hook.eu1.make.com/ohdm5yreraugif6kdck4bj7oo8y62g67',
+    STORE_AND_EMAIL: 'YOUR_MAKE_COM_WEBHOOK_1_URL',
     
     // Webhook #2: Verifies passcode entered by user
-    VERIFY_PASSCODE: 'https://hook.eu1.make.com/8et2d1wlqf8avecki8x6q9uci9o3sqxf',
+    VERIFY_PASSCODE: 'YOUR_MAKE_COM_WEBHOOK_2_URL',
     
     // Webhook #3: Stores new user registration data
-    REGISTER_USER: 'https://hook.eu1.make.com/fcanehdltyyrdxspj0y6ssavhkao8gdv',
+    REGISTER_USER: 'YOUR_MAKE_COM_WEBHOOK_3_URL',
     
     // Webhook #4: Retrieves user data on login
-    GET_USER_DATA: 'https://hook.eu1.make.com/ck0c68qcw69edyx9a84ahfw74lfmjf6w'
+    GET_USER_DATA: 'YOUR_MAKE_COM_WEBHOOK_4_URL'
 };
 
 // ============================================
@@ -259,7 +259,7 @@ function generateUserId() {
 async function sendPasscodeToWebhook(email, passcode) {
     try {
         // For demo/testing - remove in production
-        console.log('ðŸ“§ Passcode for', email, ':', passcode);
+        console.log('📧 Passcode for', email, ':', passcode);
         
         const response = await fetch(WEBHOOK_CONFIG.STORE_AND_EMAIL, {
             method: 'POST',
@@ -440,13 +440,13 @@ async function completeSignup(userIdFromWebhook) {
         createdAt: new Date().toISOString()
     };
     
-    // Register with webhook
+    // Register with webhook (saves to database)
     const result = await registerUserWithWebhook(fullUserData);
     
     if (result.success) {
-        // Store locally
+        // Store only session info locally (not full user data)
         localStorage.setItem('omegaUserId', result.userId || userId);
-        localStorage.setItem('omegaUserData', JSON.stringify(fullUserData));
+        localStorage.setItem('omegaUserEmail', signupData.businessEmail);
         localStorage.setItem('omegaAuthenticated', 'true');
         
         if (authState.rememberMe) {
@@ -475,20 +475,13 @@ async function completeLogin(userIdFromWebhook) {
     authState.isLoading = true;
     renderAuthScreen();
     
-    // Get user data from webhook
+    // Always fetch user data from webhook (database) - never use localStorage as source
     let userData = await getUserDataFromWebhook(authState.email, userIdFromWebhook);
     
-    // If webhook doesn't return data, check localStorage (for demo)
-    if (!userData) {
-        const storedData = localStorage.getItem('omegaUserData');
-        if (storedData) {
-            userData = JSON.parse(storedData);
-        }
-    }
-    
-    if (userData) {
+    if (userData && userData.success !== false) {
+        // Store session info in localStorage (just for knowing they're logged in)
         localStorage.setItem('omegaUserId', userData.userId || userIdFromWebhook);
-        localStorage.setItem('omegaUserData', JSON.stringify(userData));
+        localStorage.setItem('omegaUserEmail', authState.email);
         localStorage.setItem('omegaAuthenticated', 'true');
         
         if (authState.rememberMe) {
@@ -499,7 +492,7 @@ async function completeLogin(userIdFromWebhook) {
         authState.userId = userData.userId || userIdFromWebhook;
         authState.userData = userData;
         
-        // Update global user data
+        // Update global user data for quotes/invoices
         updateGlobalUserData(userData);
         
         authState.isLoading = false;
@@ -510,7 +503,7 @@ async function completeLogin(userIdFromWebhook) {
         });
     } else {
         authState.isLoading = false;
-        authState.errors = { general: 'Could not retrieve account data. Please try again.' };
+        authState.errors = { general: 'Could not retrieve account data. Please contact support or register a new account.' };
         renderAuthScreen();
     }
 }
@@ -691,7 +684,7 @@ function renderProgressSteps(currentStep) {
             ${steps.map((step, index) => `
                 <div class="progress-step">
                     <div class="step-circle ${index + 1 < currentStep ? 'completed' : index + 1 === currentStep ? 'active' : 'inactive'}">
-                        ${index + 1 < currentStep ? 'âœ“' : index + 1}
+                        ${index + 1 < currentStep ? '✓' : index + 1}
                     </div>
                     <span class="step-label">${step}</span>
                 </div>
@@ -1296,7 +1289,7 @@ function logout() {
     // Clear localStorage (keep remembered email if set)
     localStorage.removeItem('omegaAuthenticated');
     localStorage.removeItem('omegaUserId');
-    localStorage.removeItem('omegaUserData');
+    localStorage.removeItem('omegaUserEmail');
     
     // Clear global user data
     window.omegaUserData = null;
@@ -1315,23 +1308,40 @@ function logout() {
 // INITIALIZATION
 // ============================================
 
-function initAuth() {
-    // Check if user is already authenticated
+async function initAuth() {
+    // Check if user has an active session
     const isAuthenticated = localStorage.getItem('omegaAuthenticated') === 'true';
-    const storedUserData = localStorage.getItem('omegaUserData');
+    const storedEmail = localStorage.getItem('omegaUserEmail');
+    const storedUserId = localStorage.getItem('omegaUserId');
     
-    if (isAuthenticated && storedUserData) {
+    if (isAuthenticated && storedEmail) {
         try {
-            authState.isAuthenticated = true;
-            authState.userData = JSON.parse(storedUserData);
-            authState.userId = authState.userData.userId;
+            // Always fetch fresh data from the database (Webhook #4)
+            const userData = await getUserDataFromWebhook(storedEmail, storedUserId);
             
-            // Update global user data
-            updateGlobalUserData(authState.userData);
-            
-            return true; // User is logged in
+            if (userData && userData.success !== false) {
+                authState.isAuthenticated = true;
+                authState.userData = userData;
+                authState.userId = userData.userId || storedUserId;
+                authState.email = storedEmail;
+                
+                // Update global user data for quotes/invoices
+                updateGlobalUserData(userData);
+                
+                return true; // User is logged in with fresh data
+            } else {
+                // Database doesn't have this user - clear session
+                console.warn('User not found in database, clearing session');
+                localStorage.removeItem('omegaAuthenticated');
+                localStorage.removeItem('omegaUserId');
+                localStorage.removeItem('omegaUserEmail');
+                return false;
+            }
         } catch (e) {
-            console.error('Error parsing stored user data:', e);
+            console.error('Error fetching user data:', e);
+            // On error, require fresh login
+            localStorage.removeItem('omegaAuthenticated');
+            return false;
         }
     }
     
