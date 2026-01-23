@@ -205,13 +205,19 @@ function generateUserId() {
 // Webhook #1: Account Creation - Submit details and send OTP
 async function webhookAccountCreateOTP(userData, requestType = 'Account creation') {
     try {
-        console.log('📧 Webhook #1: Sending account details and OTP request');
+        // Generate OTP to send to webhook
+        const otp = generatePasscode();
+        const otpExpiresAt = new Date(Date.now() + 5 * 60 * 1000).toISOString();
+        
+        console.log('📧 Webhook #1: Sending account details and OTP:', otp);
         
         const response = await fetch(WEBHOOK_CONFIG.ACCOUNT_CREATE_OTP, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 ...userData,
+                otp: otp,
+                otp_expires_at: otpExpiresAt,
                 request_type: requestType,
                 timestamp: new Date().toISOString()
             })
@@ -241,13 +247,19 @@ async function webhookAccountCreateOTP(userData, requestType = 'Account creation
 // Webhook #1: Login OTP Request
 async function webhookLoginOTPRequest(email) {
     try {
-        console.log('📧 Webhook #1: Sending login OTP request for', email);
+        // Generate OTP to send to webhook
+        const otp = generatePasscode();
+        const otpExpiresAt = new Date(Date.now() + 5 * 60 * 1000).toISOString();
+        
+        console.log('📧 Webhook #1: Sending login OTP request for', email, 'OTP:', otp);
         
         const response = await fetch(WEBHOOK_CONFIG.ACCOUNT_CREATE_OTP, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 email: email,
+                otp: otp,
+                otp_expires_at: otpExpiresAt,
                 request_type: 'Login requested',
                 timestamp: new Date().toISOString()
             })
@@ -277,13 +289,19 @@ async function webhookLoginOTPRequest(email) {
 // Webhook #1: Resend Code Request
 async function webhookResendCode(email, requestType) {
     try {
-        console.log('📧 Webhook #1: Resending OTP for', email);
+        // Generate new OTP to send to webhook
+        const otp = generatePasscode();
+        const otpExpiresAt = new Date(Date.now() + 5 * 60 * 1000).toISOString();
+        
+        console.log('📧 Webhook #1: Resending OTP for', email, 'New OTP:', otp);
         
         const response = await fetch(WEBHOOK_CONFIG.ACCOUNT_CREATE_OTP, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 email: email,
+                otp: otp,
+                otp_expires_at: otpExpiresAt,
                 request_type: requestType,
                 resend: true,
                 timestamp: new Date().toISOString()
