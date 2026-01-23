@@ -5,17 +5,18 @@
 // WEBHOOK CONFIGURATION - UPDATE THESE URLs
 // ============================================
 const WEBHOOK_CONFIG = {
-    // Webhook #1: Stores passcode and sends email to user
-    STORE_AND_EMAIL: 'https://hook.eu1.make.com/ohdm5yreraugif6kdck4bj7oo8y62g67',
+    // Webhook #1: Account Creation - Stores details and sends OTP
+    // Also used for Login OTP request and Resend Code
+    ACCOUNT_CREATE_OTP: 'https://hook.eu1.make.com/ohdm5yreraugif6kdck4bj7oo8y62g67',
     
-    // Webhook #2: Verifies passcode entered by user
-    VERIFY_PASSCODE: 'https://hook.eu1.make.com/8et2d1wlqf8avecki8x6q9uci9o3sqxf',
+    // Webhook #2: Account Creation - Validates OTP
+    ACCOUNT_VALIDATE_OTP: 'https://hook.eu1.make.com/8et2d1wlqf8avecki8x6q9uci9o3sqxf',
     
-    // Webhook #3: Stores new user registration data
-    REGISTER_USER: 'https://hook.eu1.make.com/fcanehdltyyrdxspj0y6ssavhkao8gdv',
+    // Webhook #3: Get User Details (after account creation)
+    GET_USER_DETAILS: 'https://hook.eu1.make.com/fcanehdltyyrdxspj0y6ssavhkao8gdv',
     
-    // Webhook #4: Retrieves user data on login
-    GET_USER_DATA: 'https://hook.eu1.make.com/ck0c68qcw69edyx9a84ahfw74lfmjf6w'
+    // Webhook #4: Login Validation - Validates OTP and returns user data
+    LOGIN_VALIDATE: 'https://hook.eu1.make.com/ck0c68qcw69edyx9a84ahfw74lfmjf6w'
 };
 
 // ============================================
@@ -23,16 +24,23 @@ const WEBHOOK_CONFIG = {
 // ============================================
 let authState = {
     isAuthenticated: false,
-    currentView: 'initial', // initial, login, signup-step1, signup-step2, signup-step3, verify
+    currentView: 'initial', // initial, login, signup-step1, signup-step2, signup-step3, verify-signup, verify-login
     signupStep: 1,
     email: '',
-    passcode: '',
     userId: '',
-    pendingUserId: '', // Generated in Webhook #1, used throughout auth flow
     userData: null,
     isLoading: false,
     errors: {},
-    rememberMe: false
+    rememberMe: false,
+    // OTP tracking
+    otpAttempts: 0,
+    otpAttemptsRemaining: 3,
+    otpExpiry: null,
+    showResendButton: false,
+    showCreateAccountButton: false,
+    // Flow type
+    flowType: '', // 'signup' or 'login'
+    requestType: '' // 'Account creation' or 'Login requested'
 };
 
 // Signup form data
@@ -99,21 +107,18 @@ let behaviorData = {
 
 function trackKeyPress(e) {
     const now = Date.now();
-    const interval = now - behaviorData.lastKeyPress;
-    behaviorData.keyPressIntervals.push(interval);
-    if (behaviorData.keyPressIntervals.length > 30) {
-        behaviorData.keyPressIntervals.shift();
+    if (behaviorData.lastKeyPress) {
+        behaviorData.keyPressIntervals.push(now - behaviorData.lastKeyPress);
+        if (behaviorData.keyPressIntervals.length > 20) {
+            behaviorData.keyPressIntervals.shift();
+        }
     }
     behaviorData.lastKeyPress = now;
     behaviorData.lastActivity = now;
 }
 
 function trackMouseMove(e) {
-    behaviorData.mouseMovements.push({
-        x: e.clientX,
-        y: e.clientY,
-        time: Date.now()
-    });
+    behaviorData.mouseMovements.push({ x: e.clientX, y: e.clientY, t: Date.now() });
     if (behaviorData.mouseMovements.length > 50) {
         behaviorData.mouseMovements.shift();
     }
@@ -121,131 +126,68 @@ function trackMouseMove(e) {
 }
 
 function detectBot() {
-    const { keyPressIntervals, mouseMovements } = behaviorData;
-    
-    // Check for suspiciously consistent typing
-    if (keyPressIntervals.length > 10) {
-        const avg = keyPressIntervals.reduce((a, b) => a + b, 0) / keyPressIntervals.length;
-        const variance = keyPressIntervals.reduce((sum, val) => sum + Math.pow(val - avg, 2), 0) / keyPressIntervals.length;
-        
-        if (variance < 100 && avg < 50) {
+    // Check for consistent key press intervals (bot-like)
+    if (behaviorData.keyPressIntervals.length >= 5) {
+        const avg = behaviorData.keyPressIntervals.reduce((a, b) => a + b, 0) / behaviorData.keyPressIntervals.length;
+        const variance = behaviorData.keyPressIntervals.reduce((sum, val) => sum + Math.pow(val - avg, 2), 0) / behaviorData.keyPressIntervals.length;
+        if (variance < 10 && avg < 50) {
             return true;
         }
     }
     
-    // Check for lack of mouse movement
-    if (mouseMovements.length < 3 && keyPressIntervals.length > 20) {
+    // Check for no mouse movement
+    if (behaviorData.mouseMovements.length < 3 && behaviorData.keyPressIntervals.length > 10) {
         return true;
     }
     
     return false;
 }
 
+// Initialize event listeners for bot detection
+document.addEventListener('keydown', trackKeyPress);
+document.addEventListener('mousemove', trackMouseMove);
+
 // ============================================
-// VALIDATION FUNCTIONS
+// UTILITY FUNCTIONS
 // ============================================
+
 function validateEmail(email) {
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!email) return 'Email is required';
-    if (!emailRegex.test(email)) return 'Please enter a valid email address';
-    return '';
+    if (!re.test(email)) return 'Please enter a valid email';
+    return null;
 }
 
 function validatePhone(phone) {
-    const phoneRegex = /^[\d\s+()-]{10,}$/;
     if (!phone) return 'Phone number is required';
-    if (!phoneRegex.test(phone.replace(/\s/g, ''))) return 'Please enter a valid phone number';
-    return '';
+    const cleaned = phone.replace(/[\s\-\(\)]/g, '');
+    if (cleaned.length < 10) return 'Please enter a valid phone number';
+    return null;
 }
 
 function validateRequired(value, fieldName) {
     if (!value || !value.trim()) return `${fieldName} is required`;
-    return '';
+    return null;
 }
 
 function validateSortCode(sortCode) {
-    const cleaned = sortCode.replace(/[-\s]/g, '');
-    if (!cleaned) return 'Sort code is required';
+    if (!sortCode) return 'Sort code is required';
+    const cleaned = sortCode.replace(/[\s\-]/g, '');
     if (!/^\d{6}$/.test(cleaned)) return 'Sort code must be 6 digits';
-    return '';
+    return null;
 }
 
-function validateAccountNumber(accNum) {
-    const cleaned = accNum.replace(/\s/g, '');
-    if (!cleaned) return 'Account number is required';
+function validateAccountNumber(accountNumber) {
+    if (!accountNumber) return 'Account number is required';
+    const cleaned = accountNumber.replace(/[\s\-]/g, '');
     if (!/^\d{8}$/.test(cleaned)) return 'Account number must be 8 digits';
-    return '';
+    return null;
 }
 
-function validateStep1() {
-    const errors = {};
-    
-    const nameError = validateRequired(signupData.name, 'Full name');
-    if (nameError) errors.name = nameError;
-    
-    const personalEmailError = validateEmail(signupData.personalEmail);
-    if (personalEmailError) errors.personalEmail = personalEmailError;
-    
-    const personalMobileError = validatePhone(signupData.personalMobile);
-    if (personalMobileError) errors.personalMobile = personalMobileError;
-    
-    const addressError = validateRequired(signupData.address, 'Address');
-    if (addressError) errors.address = addressError;
-    
-    authState.errors = errors;
-    renderErrors();
-    return Object.keys(errors).length === 0;
-}
-
-function validateStep2() {
-    const errors = {};
-    
-    const companyNameError = validateRequired(signupData.companyName, 'Company name');
-    if (companyNameError) errors.companyName = companyNameError;
-    
-    const businessEmailError = validateEmail(signupData.businessEmail);
-    if (businessEmailError) errors.businessEmail = businessEmailError;
-    
-    const businessMobileError = validatePhone(signupData.businessMobile);
-    if (businessMobileError) errors.businessMobile = businessMobileError;
-    
-    if (!signupData.niche) errors.niche = 'Please select your trade';
-    
-    authState.errors = errors;
-    renderErrors();
-    return Object.keys(errors).length === 0;
-}
-
-function validateStep3() {
-    const errors = {};
-    
-    const bankNameError = validateRequired(signupData.bankName, 'Bank name');
-    if (bankNameError) errors.bankName = bankNameError;
-    
-    const accountNameError = validateRequired(signupData.accountName, 'Account name');
-    if (accountNameError) errors.accountName = accountNameError;
-    
-    const sortCodeError = validateSortCode(signupData.sortCode);
-    if (sortCodeError) errors.sortCode = sortCodeError;
-    
-    const accountNumberError = validateAccountNumber(signupData.accountNumber);
-    if (accountNumberError) errors.accountNumber = accountNumberError;
-    
-    authState.errors = errors;
-    renderErrors();
-    return Object.keys(errors).length === 0;
-}
-
-// ============================================
-// WEBHOOK FUNCTIONS
-// ============================================
-
-// Generate 6-digit passcode
 function generatePasscode() {
     return Math.floor(100000 + Math.random() * 900000).toString();
 }
 
-// Generate unique user ID
 function generateUserId() {
     const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
     let id = '';
@@ -256,100 +198,215 @@ function generateUserId() {
     return id;
 }
 
-// Webhook #1: Send passcode for storage and email
-async function sendPasscodeToWebhook(email, passcode, userId) {
-    try {
-        // For demo/testing - remove in production
-        console.log('📧 Passcode for', email, ':', passcode, 'userId:', userId);
-        
-        const response = await fetch(WEBHOOK_CONFIG.STORE_AND_EMAIL, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                email: email,
-                passcode: passcode,
-                userId: userId,
-                timestamp: new Date().toISOString(),
-                expiresIn: 300 // 5 minutes
-            })
-        });
-        
-        return response.ok;
-    } catch (error) {
-        console.error('Webhook #1 error:', error);
-        // For demo - return true to allow testing without webhook
-        return true;
-    }
-}
+// ============================================
+// WEBHOOK FUNCTIONS
+// ============================================
 
-// Webhook #2: Verify passcode
-async function verifyPasscodeWithWebhook(email, passcode) {
+// Webhook #1: Account Creation - Submit details and send OTP
+async function webhookAccountCreateOTP(userData, requestType = 'Account creation') {
     try {
-        const response = await fetch(WEBHOOK_CONFIG.VERIFY_PASSCODE, {
+        console.log('📧 Webhook #1: Sending account details and OTP request');
+        
+        const response = await fetch(WEBHOOK_CONFIG.ACCOUNT_CREATE_OTP, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-                email: email,
-                passcode: passcode
+                ...userData,
+                request_type: requestType,
+                timestamp: new Date().toISOString()
             })
         });
         
         if (!response.ok) {
-            return { valid: false, error: 'Network error' };
+            return { status: 'error', message: 'Network error' };
         }
         
         const result = await response.json();
+        console.log('Webhook #1 response:', result);
+        return result;
+    } catch (error) {
+        console.error('Webhook #1 error:', error);
+        // Demo fallback
+        return {
+            status: 'success',
+            message: 'Account details received and OTP sent',
+            user_id: generateUserId(),
+            email: userData.email || userData.businessEmail,
+            otp_sent: true,
+            otp_expires_at: new Date(Date.now() + 5 * 60 * 1000).toISOString()
+        };
+    }
+}
+
+// Webhook #1: Login OTP Request
+async function webhookLoginOTPRequest(email) {
+    try {
+        console.log('📧 Webhook #1: Sending login OTP request for', email);
+        
+        const response = await fetch(WEBHOOK_CONFIG.ACCOUNT_CREATE_OTP, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                email: email,
+                request_type: 'Login requested',
+                timestamp: new Date().toISOString()
+            })
+        });
+        
+        if (!response.ok) {
+            return { status: 'error', message: 'Network error' };
+        }
+        
+        const result = await response.json();
+        console.log('Webhook #1 (login) response:', result);
+        return result;
+    } catch (error) {
+        console.error('Webhook #1 (login) error:', error);
+        // Demo fallback
+        return {
+            status: 'success',
+            message: 'Login OTP sent',
+            email: email,
+            otp_sent: true,
+            otp_expires_at: new Date(Date.now() + 5 * 60 * 1000).toISOString(),
+            request_type: 'Login requested'
+        };
+    }
+}
+
+// Webhook #1: Resend Code Request
+async function webhookResendCode(email, requestType) {
+    try {
+        console.log('📧 Webhook #1: Resending OTP for', email);
+        
+        const response = await fetch(WEBHOOK_CONFIG.ACCOUNT_CREATE_OTP, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                email: email,
+                request_type: requestType,
+                resend: true,
+                timestamp: new Date().toISOString()
+            })
+        });
+        
+        if (!response.ok) {
+            return { status: 'error', message: 'Network error' };
+        }
+        
+        const result = await response.json();
+        console.log('Webhook #1 (resend) response:', result);
+        return result;
+    } catch (error) {
+        console.error('Webhook #1 (resend) error:', error);
+        // Demo fallback
+        return {
+            status: 'success',
+            message: 'New OTP sent',
+            email: email,
+            otp_sent: true,
+            otp_expires_at: new Date(Date.now() + 5 * 60 * 1000).toISOString(),
+            attempts_reset: true
+        };
+    }
+}
+
+// Webhook #2: Account Creation - Validate OTP
+async function webhookAccountValidateOTP(email, otp, attemptCount) {
+    try {
+        console.log('🔐 Webhook #2: Validating signup OTP, attempt', attemptCount);
+        
+        const response = await fetch(WEBHOOK_CONFIG.ACCOUNT_VALIDATE_OTP, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                email: email,
+                otp: otp,
+                attempt_count: attemptCount,
+                timestamp: new Date().toISOString()
+            })
+        });
+        
+        if (!response.ok) {
+            return { status: 'error', message: 'Network error' };
+        }
+        
+        const result = await response.json();
+        console.log('Webhook #2 response:', result);
         return result;
     } catch (error) {
         console.error('Webhook #2 error:', error);
-        // For demo - simulate successful verification
-        return { valid: true, userId: generateUserId() };
+        // Demo fallback - simulate success
+        return {
+            status: 'success',
+            message: 'OTP validated successfully',
+            user_id: authState.userId,
+            otp_valid: true,
+            attempts_used: attemptCount,
+            attempts_remaining: 3 - attemptCount
+        };
     }
 }
 
-// Webhook #3: Register new user
-async function registerUserWithWebhook(userData) {
+// Webhook #3: Get User Details
+async function webhookGetUserDetails(email) {
     try {
-        const response = await fetch(WEBHOOK_CONFIG.REGISTER_USER, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(userData)
-        });
+        console.log('👤 Webhook #3: Getting user details for', email);
         
-        if (!response.ok) {
-            return { success: false, error: 'Registration failed' };
-        }
-        
-        const result = await response.json();
-        return result;
-    } catch (error) {
-        console.error('Webhook #3 error:', error);
-        // For demo - return success
-        return { success: true, userId: generateUserId() };
-    }
-}
-
-// Webhook #4: Get user data on login
-async function getUserDataFromWebhook(email, userId) {
-    try {
-        const response = await fetch(WEBHOOK_CONFIG.GET_USER_DATA, {
+        const response = await fetch(WEBHOOK_CONFIG.GET_USER_DETAILS, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 email: email,
-                userId: userId
+                timestamp: new Date().toISOString()
             })
         });
         
         if (!response.ok) {
-            return null;
+            return { status: 'error', message: 'Network error' };
         }
         
-        const userData = await response.json();
-        return userData;
+        const result = await response.json();
+        console.log('Webhook #3 response:', result);
+        return result;
+    } catch (error) {
+        console.error('Webhook #3 error:', error);
+        return { status: 'error', message: 'Failed to get user details' };
+    }
+}
+
+// Webhook #4: Login Validation - Validate OTP and return user data
+async function webhookLoginValidate(email, otp, attemptCount) {
+    try {
+        console.log('🔐 Webhook #4: Validating login, attempt', attemptCount);
+        
+        const response = await fetch(WEBHOOK_CONFIG.LOGIN_VALIDATE, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                email: email,
+                otp: otp,
+                attempt_count: attemptCount,
+                timestamp: new Date().toISOString()
+            })
+        });
+        
+        if (!response.ok) {
+            return { status: 'error', message: 'Network error' };
+        }
+        
+        const result = await response.json();
+        console.log('Webhook #4 response:', result);
+        return result;
     } catch (error) {
         console.error('Webhook #4 error:', error);
-        return null;
+        // Demo fallback
+        return {
+            status: 'error',
+            message: 'Login validation failed',
+            otp_valid: false,
+            user_exists: false
+        };
     }
 }
 
@@ -357,185 +414,371 @@ async function getUserDataFromWebhook(email, userId) {
 // AUTH FLOW HANDLERS
 // ============================================
 
-async function handleSendPasscode(email) {
+// Handle Signup Step 3 Submit - Send all details to Webhook #1
+async function handleSignupSubmit() {
+    if (!validateStep3()) return;
+    
     if (detectBot()) {
         authState.errors = { general: 'Suspicious activity detected. Please try again.' };
         renderAuthScreen();
-        return false;
-    }
-    
-    authState.isLoading = true;
-    renderAuthScreen();
-    
-    const passcode = generatePasscode();
-    const userId = generateUserId();
-    
-    authState.passcode = passcode; // Store for demo verification
-    authState.pendingUserId = userId; // Store userId for use in signup/login
-    
-    const success = await sendPasscodeToWebhook(email, passcode, userId);
-    
-    authState.isLoading = false;
-    
-    if (success) {
-        authState.email = email;
-        authState.currentView = 'verify';
-        renderAuthScreen();
-        
-        setTimeout(() => {
-            const passcodeInput = document.getElementById('passcodeInput');
-            if (passcodeInput) passcodeInput.focus();
-        }, 100);
-        
-        return true;
-    } else {
-        authState.errors = { general: 'Failed to send passcode. Please try again.' };
-        renderAuthScreen();
-        return false;
-    }
-}
-
-async function handleVerifyPasscode() {
-    const enteredPasscode = document.getElementById('passcodeInput').value;
-    
-    if (enteredPasscode.length !== 6) {
-        authState.errors = { passcode: 'Please enter the 6-digit code' };
-        renderErrors();
         return;
     }
     
     authState.isLoading = true;
+    authState.errors = {};
     renderAuthScreen();
     
-    const result = await verifyPasscodeWithWebhook(authState.email, enteredPasscode);
+    // Prepare full user data for Webhook #1
+    const userData = {
+        user_id: generateUserId(),
+        // Personal Info
+        name: signupData.name,
+        personal_email: signupData.personalEmail,
+        personal_mobile: signupData.personalMobile,
+        address: signupData.address,
+        // Business Info
+        company_name: signupData.companyName,
+        business_email: signupData.businessEmail,
+        business_mobile: signupData.businessMobile,
+        niche: signupData.niche,
+        company_logo: signupData.companyLogo,
+        // Bank Details
+        bank_name: signupData.bankName,
+        account_name: signupData.accountName,
+        sort_code: signupData.sortCode,
+        account_number: signupData.accountNumber
+    };
+    
+    // Send to Webhook #1
+    const result = await webhookAccountCreateOTP(userData, 'Account creation');
     
     authState.isLoading = false;
     
-    if (result.valid) {
-        // Check if this is the final step of signup (after Step 3)
-        if (authState.signupStep === 3) {
-            // User just completed Step 3 and verified - complete signup
-            await completeSignup();
-        } else if (result.isNewUser) {
-            // New user from login - start signup flow
-            authState.signupStep = 1;
-            authState.currentView = 'signup-step1';
-            renderAuthScreen();
+    if (result.status === 'success' && result.otp_sent) {
+        // Store user ID and email from response
+        authState.userId = result.user_id;
+        authState.email = result.email || signupData.businessEmail;
+        authState.otpExpiry = result.otp_expires_at;
+        authState.otpAttempts = 0;
+        authState.otpAttemptsRemaining = 3;
+        authState.showResendButton = false;
+        authState.flowType = 'signup';
+        authState.requestType = 'Account creation';
+        authState.currentView = 'verify-signup';
+        renderAuthScreen();
+        
+        // Focus OTP input
+        setTimeout(() => {
+            const otpInput = document.getElementById('otpInput');
+            if (otpInput) otpInput.focus();
+        }, 100);
+    } else {
+        authState.errors = { general: result.message || 'Failed to create account. Please try again.' };
+        renderAuthScreen();
+    }
+}
+
+// Handle Login Submit - Send email to Webhook #1 for OTP
+async function handleLoginSubmit() {
+    const email = document.getElementById('loginEmail').value;
+    const error = validateEmail(email);
+    
+    if (error) {
+        authState.errors = { email: error };
+        renderAuthScreen();
+        return;
+    }
+    
+    if (detectBot()) {
+        authState.errors = { general: 'Suspicious activity detected. Please try again.' };
+        renderAuthScreen();
+        return;
+    }
+    
+    authState.isLoading = true;
+    authState.errors = {};
+    renderAuthScreen();
+    
+    // Send to Webhook #1 for login OTP
+    const result = await webhookLoginOTPRequest(email);
+    
+    authState.isLoading = false;
+    
+    if (result.status === 'success' && result.otp_sent) {
+        authState.email = result.email || email;
+        authState.otpExpiry = result.otp_expires_at;
+        authState.otpAttempts = 0;
+        authState.otpAttemptsRemaining = 3;
+        authState.showResendButton = false;
+        authState.showCreateAccountButton = false;
+        authState.flowType = 'login';
+        authState.requestType = 'Login requested';
+        authState.currentView = 'verify-login';
+        renderAuthScreen();
+        
+        // Focus OTP input
+        setTimeout(() => {
+            const otpInput = document.getElementById('otpInput');
+            if (otpInput) otpInput.focus();
+        }, 100);
+    } else {
+        authState.errors = { general: result.message || 'Failed to send OTP. Please try again.' };
+        renderAuthScreen();
+    }
+}
+
+// Handle OTP Verification for Signup (Webhook #2)
+async function handleSignupOTPVerify() {
+    const otp = document.getElementById('otpInput').value;
+    
+    if (otp.length !== 6) {
+        authState.errors = { otp: 'Please enter the 6-digit code' };
+        renderAuthScreen();
+        return;
+    }
+    
+    authState.isLoading = true;
+    authState.errors = {};
+    authState.otpAttempts++;
+    renderAuthScreen();
+    
+    // Send to Webhook #2
+    const result = await webhookAccountValidateOTP(authState.email, otp, authState.otpAttempts);
+    
+    authState.isLoading = false;
+    
+    if (result.status === 'success' && result.otp_valid) {
+        // OTP valid - account created successfully
+        authState.userId = result.user_id || authState.userId;
+        authState.otpAttemptsRemaining = result.attempts_remaining;
+        
+        // Get user details from Webhook #3
+        const userDetails = await webhookGetUserDetails(authState.email);
+        
+        if (userDetails.status === 'success' && userDetails.user) {
+            // Store user data and complete signup
+            completeAuthentication(userDetails.user);
         } else {
-            // Returning user - complete login using pendingUserId from Webhook #1
-            await completeLogin(authState.pendingUserId);
+            // Use signup data as fallback
+            completeAuthentication({
+                user_id: authState.userId,
+                email: authState.email,
+                company_name: signupData.companyName,
+                address: signupData.address,
+                phone: signupData.businessMobile,
+                logo: signupData.companyLogo,
+                bank_details: {
+                    bank_name: signupData.bankName,
+                    account_name: signupData.accountName,
+                    sort_code: signupData.sortCode,
+                    account_number: signupData.accountNumber
+                }
+            });
         }
     } else {
-        let errorMessage = 'Invalid passcode. Please try again.';
-        if (result.reason === 'expired') {
-            errorMessage = 'Passcode expired. Please request a new one.';
+        // OTP invalid
+        authState.otpAttemptsRemaining = result.attempts_remaining;
+        
+        if (result.otp_deleted || result.attempts_remaining === 0) {
+            // Max attempts reached
+            authState.showResendButton = true;
+            authState.errors = { otp: 'Maximum attempts exceeded. Please request a new code.' };
+        } else {
+            authState.errors = { 
+                otp: `Invalid code. ${result.attempts_remaining} attempt${result.attempts_remaining !== 1 ? 's' : ''} remaining.` 
+            };
         }
-        authState.errors = { passcode: errorMessage };
+        
         renderAuthScreen();
         
         // Shake animation
-        const input = document.getElementById('passcodeInput');
+        const input = document.getElementById('otpInput');
         if (input) {
             input.classList.add('error');
+            input.value = '';
             setTimeout(() => input.classList.remove('error'), 500);
         }
     }
 }
 
-async function completeSignup() {
-    // Use the userId generated in Webhook #1
-    const userId = authState.pendingUserId;
+// Handle OTP Verification for Login (Webhook #4)
+async function handleLoginOTPVerify() {
+    const otp = document.getElementById('otpInput').value;
     
-    const fullUserData = {
-        userId: userId,
-        ...signupData,
-        createdAt: new Date().toISOString()
-    };
+    if (otp.length !== 6) {
+        authState.errors = { otp: 'Please enter the 6-digit code' };
+        renderAuthScreen();
+        return;
+    }
     
-    // Register with webhook (saves to database)
-    const result = await registerUserWithWebhook(fullUserData);
+    authState.isLoading = true;
+    authState.errors = {};
+    authState.otpAttempts++;
+    renderAuthScreen();
     
-    if (result.success) {
-        // Store only session info locally (not full user data)
-        localStorage.setItem('omegaUserId', userId);
-        localStorage.setItem('omegaUserEmail', signupData.businessEmail);
-        localStorage.setItem('omegaAuthenticated', 'true');
+    // Send to Webhook #4
+    const result = await webhookLoginValidate(authState.email, otp, authState.otpAttempts);
+    
+    authState.isLoading = false;
+    
+    if (result.status === 'success' && result.otp_valid && result.user_exists) {
+        // Login successful
+        authState.otpAttemptsRemaining = result.attempts_remaining;
+        completeAuthentication(result.user);
+    } else {
+        // Login failed
+        authState.otpAttemptsRemaining = result.attempts_remaining;
         
-        if (authState.rememberMe) {
-            localStorage.setItem('omegaRememberedEmail', signupData.businessEmail);
+        if (!result.user_exists) {
+            // User doesn't exist - show Create Account button
+            authState.showCreateAccountButton = true;
+            authState.errors = { otp: 'Account not found. Please create an account.' };
+        } else if (result.otp_deleted || result.attempts_remaining === 0) {
+            // Max attempts reached
+            authState.showResendButton = true;
+            authState.errors = { otp: 'Maximum attempts exceeded. Please request a new code.' };
+        } else {
+            authState.errors = { 
+                otp: `Invalid code. ${result.attempts_remaining} attempt${result.attempts_remaining !== 1 ? 's' : ''} remaining.` 
+            };
         }
         
-        authState.isAuthenticated = true;
-        authState.userId = userId;
-        authState.userData = fullUserData;
+        renderAuthScreen();
         
-        // Update global user data for quotes/invoices
-        updateGlobalUserData(fullUserData);
+        // Shake animation
+        const input = document.getElementById('otpInput');
+        if (input) {
+            input.classList.add('error');
+            input.value = '';
+            setTimeout(() => input.classList.remove('error'), 500);
+        }
+    }
+}
+
+// Handle Resend Code
+async function handleResendCode() {
+    authState.isLoading = true;
+    authState.errors = {};
+    authState.showResendButton = false;
+    renderAuthScreen();
+    
+    const result = await webhookResendCode(authState.email, authState.requestType);
+    
+    authState.isLoading = false;
+    
+    if (result.status === 'success' && result.otp_sent) {
+        authState.otpAttempts = 0;
+        authState.otpAttemptsRemaining = 3;
+        authState.otpExpiry = result.otp_expires_at;
+        authState.errors = { success: 'New code sent! Check your email.' };
+        renderAuthScreen();
         
-        // Show success and redirect
-        showAuthSuccess('Account created successfully!', () => {
-            hideAuthScreen();
-            showDashboard();
-        });
+        // Clear success message after 3 seconds
+        setTimeout(() => {
+            authState.errors = {};
+            renderAuthScreen();
+        }, 3000);
     } else {
-        authState.errors = { general: 'Registration failed. Please try again.' };
+        authState.showResendButton = true;
+        authState.errors = { general: 'Failed to resend code. Please try again.' };
         renderAuthScreen();
     }
 }
 
-async function completeLogin(userIdFromWebhook) {
-    authState.isLoading = true;
-    renderAuthScreen();
+// Handle Create Account button (shown when user doesn't exist during login)
+function handleCreateAccountRedirect() {
+    // Reset state for signup flow
+    authState.currentView = 'signup-step1';
+    authState.signupStep = 1;
+    authState.otpAttempts = 0;
+    authState.otpAttemptsRemaining = 3;
+    authState.showCreateAccountButton = false;
+    authState.showResendButton = false;
+    authState.errors = {};
+    authState.flowType = 'signup';
     
-    // Always fetch user data from webhook (database) - never use localStorage as source
-    let userData = await getUserDataFromWebhook(authState.email, userIdFromWebhook);
-    
-    if (userData && userData.success !== false) {
-        // Store session info in localStorage (just for knowing they're logged in)
-        localStorage.setItem('omegaUserId', userData.userId || userIdFromWebhook);
-        localStorage.setItem('omegaUserEmail', authState.email);
-        localStorage.setItem('omegaAuthenticated', 'true');
-        
-        if (authState.rememberMe) {
-            localStorage.setItem('omegaRememberedEmail', authState.email);
-        }
-        
-        authState.isAuthenticated = true;
-        authState.userId = userData.userId || userIdFromWebhook;
-        authState.userData = userData;
-        
-        // Update global user data for quotes/invoices
-        updateGlobalUserData(userData);
-        
-        authState.isLoading = false;
-        
-        showAuthSuccess('Welcome back!', () => {
-            hideAuthScreen();
-            showDashboard();
-        });
-    } else {
-        authState.isLoading = false;
-        authState.errors = { general: 'Could not retrieve account data. Please contact support or register a new account.' };
-        renderAuthScreen();
+    // Pre-fill email if available
+    if (authState.email) {
+        signupData.businessEmail = authState.email;
     }
+    
+    renderAuthScreen();
+}
+
+// Complete authentication and redirect to dashboard
+function completeAuthentication(userData) {
+    // Normalize user data
+    const normalizedData = {
+        userId: userData.user_id || userData.userId,
+        email: userData.email || userData.business_email,
+        companyName: userData.company_name || userData.companyName,
+        address: userData.address,
+        phone: userData.phone || userData.business_mobile,
+        personalEmail: userData.personal_email,
+        personalMobile: userData.personal_mobile,
+        businessEmail: userData.business_email || userData.email,
+        businessMobile: userData.business_mobile || userData.phone,
+        niche: userData.niche,
+        logo: userData.logo || userData.company_logo,
+        bankDetails: userData.bank_details || userData.bankDetails || {
+            bankName: userData.bank_name,
+            accountName: userData.account_name,
+            sortCode: userData.sort_code,
+            accountNumber: userData.account_number
+        }
+    };
+    
+    // Store session info
+    localStorage.setItem('omegaAuthenticated', 'true');
+    localStorage.setItem('omegaUserId', normalizedData.userId);
+    localStorage.setItem('omegaUserEmail', normalizedData.email);
+    
+    if (authState.rememberMe) {
+        localStorage.setItem('omegaRememberedEmail', normalizedData.email);
+    }
+    
+    // Update auth state
+    authState.isAuthenticated = true;
+    authState.userId = normalizedData.userId;
+    authState.userData = normalizedData;
+    
+    // Update global user data for quotes/invoices
+    updateGlobalUserData(normalizedData);
+    
+    // Show success and redirect
+    const message = authState.flowType === 'signup' ? 'Account created successfully!' : 'Welcome back!';
+    showAuthSuccess(message, () => {
+        hideAuthScreen();
+        showDashboard();
+    });
 }
 
 // ============================================
 // UPDATE GLOBAL USER DATA FOR QUOTES/INVOICES
 // ============================================
+
 function updateGlobalUserData(userData) {
-    // Store in window for access by quote/invoice generators
     window.omegaUserData = {
-        companyName: userData.companyName || 'Your Company',
+        companyName: userData.companyName || userData.company_name || 'Your Company',
         address: userData.address || '',
-        phone: userData.businessMobile || userData.personalMobile || '',
-        email: userData.businessEmail || userData.personalEmail || '',
-        logo: userData.companyLogo || null,
-        bankDetails: {
-            bankName: userData.bankName || '',
-            accountName: userData.accountName || '',
-            sortCode: userData.sortCode || '',
-            accountNumber: userData.accountNumber || ''
+        phone: userData.phone || userData.businessMobile || userData.business_mobile || '',
+        email: userData.email || userData.businessEmail || userData.business_email || '',
+        logo: userData.logo || userData.companyLogo || userData.company_logo || null,
+        
+        // Additional fields
+        businessEmail: userData.businessEmail || userData.business_email || userData.email || '',
+        businessMobile: userData.businessMobile || userData.business_mobile || userData.phone || '',
+        personalEmail: userData.personalEmail || userData.personal_email || '',
+        personalMobile: userData.personalMobile || userData.personal_mobile || '',
+        tradeNiche: userData.niche || userData.tradeNiche || '',
+        userId: userData.userId || userData.user_id || '',
+        
+        // Bank details for invoices
+        bankDetails: userData.bankDetails || userData.bank_details || {
+            bankName: '',
+            accountName: '',
+            sortCode: '',
+            accountNumber: ''
         }
     };
     
@@ -543,12 +786,79 @@ function updateGlobalUserData(userData) {
 }
 
 // ============================================
-// UI RENDERING FUNCTIONS
+// VALIDATION FUNCTIONS
+// ============================================
+
+function validateStep1() {
+    const errors = {};
+    
+    let nameError = validateRequired(signupData.name, 'Full name');
+    if (nameError) errors.name = nameError;
+    
+    let personalEmailError = validateEmail(signupData.personalEmail);
+    if (personalEmailError) errors.personalEmail = personalEmailError;
+    
+    let phoneError = validatePhone(signupData.personalMobile);
+    if (phoneError) errors.personalMobile = phoneError;
+    
+    let addressError = validateRequired(signupData.address, 'Address');
+    if (addressError) errors.address = addressError;
+    
+    authState.errors = errors;
+    renderAuthScreen();
+    
+    return Object.keys(errors).length === 0;
+}
+
+function validateStep2() {
+    const errors = {};
+    
+    let companyError = validateRequired(signupData.companyName, 'Company name');
+    if (companyError) errors.companyName = companyError;
+    
+    let emailError = validateEmail(signupData.businessEmail);
+    if (emailError) errors.businessEmail = emailError;
+    
+    let phoneError = validatePhone(signupData.businessMobile);
+    if (phoneError) errors.businessMobile = phoneError;
+    
+    let nicheError = validateRequired(signupData.niche, 'Trade/Niche');
+    if (nicheError) errors.niche = nicheError;
+    
+    authState.errors = errors;
+    renderAuthScreen();
+    
+    return Object.keys(errors).length === 0;
+}
+
+function validateStep3() {
+    const errors = {};
+    
+    let bankError = validateRequired(signupData.bankName, 'Bank name');
+    if (bankError) errors.bankName = bankError;
+    
+    let accountNameError = validateRequired(signupData.accountName, 'Account name');
+    if (accountNameError) errors.accountName = accountNameError;
+    
+    let sortCodeError = validateSortCode(signupData.sortCode);
+    if (sortCodeError) errors.sortCode = sortCodeError;
+    
+    let accountNumberError = validateAccountNumber(signupData.accountNumber);
+    if (accountNumberError) errors.accountNumber = accountNumberError;
+    
+    authState.errors = errors;
+    renderAuthScreen();
+    
+    return Object.keys(errors).length === 0;
+}
+
+// ============================================
+// UI RENDERING
 // ============================================
 
 function renderAuthScreen() {
-    const authContainer = document.getElementById('authScreen');
-    if (!authContainer) return;
+    const authScreen = document.getElementById('authScreen');
+    if (!authScreen) return;
     
     let content = '';
     
@@ -568,30 +878,17 @@ function renderAuthScreen() {
         case 'signup-step3':
             content = renderSignupStep3();
             break;
-        case 'verify':
-            content = renderVerifyView();
+        case 'verify-signup':
+            content = renderVerifySignup();
             break;
+        case 'verify-login':
+            content = renderVerifyLogin();
+            break;
+        default:
+            content = renderInitialView();
     }
     
-    authContainer.innerHTML = `
-        <div class="auth-container" onmousemove="trackMouseMove(event)">
-            <div class="auth-card">
-                <div class="security-badge">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
-                    </svg>
-                    Secure Connection
-                </div>
-                ${content}
-                <div class="auth-footer">
-                    <p>OMEGA Professional Tools</p>
-                </div>
-            </div>
-        </div>
-    `;
-    
-    // Add event listeners
-    attachAuthEventListeners();
+    authScreen.innerHTML = content;
 }
 
 function renderInitialView() {
@@ -599,43 +896,42 @@ function renderInitialView() {
     const hasExistingAccount = localStorage.getItem('omegaAuthenticated') === 'true';
     
     return `
-        <div class="auth-header">
-            <img src="https://github.com/connecttraderbrothers/omega.app.icon/blob/main/icon-512x512.png?raw=true" 
-                 alt="OMEGA Logo" class="auth-logo">
-            <h1 class="auth-title">
-                <span class="highlight">OMEGA</span>
-            </h1>
-            <p class="auth-subtitle">Professional Business Tools</p>
+        <div class="auth-container">
+            <div class="auth-card">
+                <div class="auth-header">
+                    <img src="https://github.com/connecttraderbrothers/omega.app.icon/blob/main/icon-512x512.png?raw=true" alt="OMEGA" class="auth-logo">
+                    <h1 class="auth-title">OMEGA</h1>
+                    <p class="auth-subtitle">Professional Business Tools</p>
+                </div>
+                
+                <div class="auth-content">
+                    ${hasExistingAccount ? `
+                        <div class="welcome-back-message">
+                            <p>Welcome back!</p>
+                            <p class="user-email">${rememberedEmail || ''}</p>
+                        </div>
+                    ` : `
+                        <p class="auth-description">
+                            Create professional quotes and invoices in minutes. 
+                            Sign up for free or log in to continue.
+                        </p>
+                    `}
+                    
+                    <div class="auth-buttons">
+                        <button class="auth-btn primary" onclick="showSignupStep1()">
+                            Create Account
+                        </button>
+                        <button class="auth-btn secondary" onclick="showLoginView()">
+                            ${hasExistingAccount ? 'Log In' : 'I have an account'}
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="auth-footer">
+                    <p>By continuing, you agree to our Terms of Service</p>
+                </div>
+            </div>
         </div>
-        
-        <div class="initial-buttons">
-            <button class="auth-btn primary" onclick="showLoginView()">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
-                    <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
-                </svg>
-                Login
-            </button>
-            
-            ${!hasExistingAccount ? `
-            <button class="auth-btn success" onclick="showSignupStep1()">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
-                    <circle cx="8.5" cy="7" r="4"/>
-                    <line x1="20" y1="8" x2="20" y2="14"/>
-                    <line x1="23" y1="11" x2="17" y2="11"/>
-                </svg>
-                Create Account
-            </button>
-            ` : ''}
-        </div>
-        
-        ${hasExistingAccount ? `
-        <div class="user-id-display">
-            <p>Logged in previously as:</p>
-            <p class="user-id">${localStorage.getItem('omegaUserId') || 'Unknown'}</p>
-        </div>
-        ` : ''}
     `;
 }
 
@@ -643,161 +939,139 @@ function renderLoginView() {
     const rememberedEmail = localStorage.getItem('omegaRememberedEmail') || '';
     
     return `
-        <div class="auth-header">
-            <h1 class="auth-title">Welcome Back</h1>
-            <p class="auth-subtitle">Enter your email to receive a login code</p>
-        </div>
-        
-        <div class="auth-form">
-            <div class="form-group">
-                <label class="form-label">Business Email</label>
-                <div class="input-wrapper">
-                    <input type="email" 
-                           id="loginEmail" 
-                           class="form-input ${authState.errors.email ? 'error' : ''}"
-                           placeholder="you@company.com"
-                           value="${rememberedEmail}"
-                           onkeypress="trackKeyPress(event)"
-                           onkeyup="if(event.key === 'Enter') handleLoginSubmit()">
-                    <span class="input-icon">
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
-                            <polyline points="22,6 12,13 2,6"/>
-                        </svg>
-                    </span>
+        <div class="auth-container">
+            <div class="auth-card">
+                <div class="auth-header">
+                    <img src="https://github.com/connecttraderbrothers/omega.app.icon/blob/main/icon-512x512.png?raw=true" alt="OMEGA" class="auth-logo">
+                    <h1 class="auth-title">Welcome Back</h1>
+                    <p class="auth-subtitle">Enter your email to receive a login code</p>
                 </div>
-                ${authState.errors.email ? `<div class="error-message"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>${authState.errors.email}</div>` : ''}
-            </div>
-            
-            <div class="checkbox-wrapper">
-                <input type="checkbox" id="rememberMe" class="checkbox-input" ${authState.rememberMe ? 'checked' : ''} onchange="authState.rememberMe = this.checked">
-                <label for="rememberMe" class="checkbox-label">Remember me</label>
-            </div>
-            
-            ${authState.errors.general ? `<div class="alert error"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>${authState.errors.general}</div>` : ''}
-            
-            <div class="btn-group">
-                <button class="auth-btn primary" onclick="handleLoginSubmit()" ${authState.isLoading ? 'disabled' : ''}>
-                    ${authState.isLoading ? '<span class="spinner"></span> Sending...' : 'Send Login Code'}
-                </button>
-                <button class="auth-btn secondary" onclick="showInitialView()">
-                    Back
-                </button>
-            </div>
-        </div>
-    `;
-}
-
-function renderProgressSteps(currentStep) {
-    const steps = ['Personal', 'Business', 'Banking'];
-    
-    return `
-        <div class="progress-steps">
-            ${steps.map((step, index) => `
-                <div class="progress-step">
-                    <div class="step-circle ${index + 1 < currentStep ? 'completed' : index + 1 === currentStep ? 'active' : 'inactive'}">
-                        ${index + 1 < currentStep ? '✓' : index + 1}
+                
+                <div class="auth-content">
+                    ${authState.errors.general ? `<div class="auth-error-banner">${authState.errors.general}</div>` : ''}
+                    
+                    <div class="form-group">
+                        <label for="loginEmail">Email Address</label>
+                        <input 
+                            type="email" 
+                            id="loginEmail" 
+                            class="auth-input ${authState.errors.email ? 'error' : ''}"
+                            placeholder="your@email.com"
+                            value="${rememberedEmail}"
+                            ${authState.isLoading ? 'disabled' : ''}
+                        >
+                        ${authState.errors.email ? `<span class="error-text">${authState.errors.email}</span>` : ''}
                     </div>
-                    <span class="step-label">${step}</span>
+                    
+                    <div class="form-group remember-me">
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="rememberMe" ${authState.rememberMe ? 'checked' : ''} onchange="authState.rememberMe = this.checked">
+                            <span>Remember me</span>
+                        </label>
+                    </div>
+                    
+                    <button class="auth-btn primary" onclick="handleLoginSubmit()" ${authState.isLoading ? 'disabled' : ''}>
+                        ${authState.isLoading ? '<span class="spinner"></span> Sending...' : 'Send Login Code'}
+                    </button>
+                    
+                    <div class="auth-divider">
+                        <span>or</span>
+                    </div>
+                    
+                    <button class="auth-btn secondary" onclick="showSignupStep1()" ${authState.isLoading ? 'disabled' : ''}>
+                        Create New Account
+                    </button>
                 </div>
-                ${index < steps.length - 1 ? `<div class="step-connector ${index + 1 < currentStep ? 'active' : ''}"></div>` : ''}
-            `).join('')}
+                
+                <div class="auth-back">
+                    <a href="#" onclick="showInitialView(); return false;">← Back</a>
+                </div>
+            </div>
         </div>
     `;
 }
 
 function renderSignupStep1() {
     return `
-        <div class="auth-header">
-            <h1 class="auth-title">Create Account</h1>
-            <p class="auth-subtitle">Step 1: Personal Information</p>
-        </div>
-        
-        ${renderProgressSteps(1)}
-        
-        <div class="auth-form form-section">
-            <div class="form-group">
-                <label class="form-label">Full Name <span class="required">*</span></label>
-                <div class="input-wrapper">
-                    <input type="text" 
-                           id="signupName" 
-                           class="form-input ${authState.errors.name ? 'error' : ''}"
-                           placeholder="John Smith"
-                           value="${signupData.name}"
-                           onkeypress="trackKeyPress(event)"
-                           oninput="signupData.name = this.value">
-                    <span class="input-icon">
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
-                            <circle cx="12" cy="7" r="4"/>
-                        </svg>
-                    </span>
+        <div class="auth-container">
+            <div class="auth-card">
+                <div class="auth-header">
+                    <img src="https://github.com/connecttraderbrothers/omega.app.icon/blob/main/icon-512x512.png?raw=true" alt="OMEGA" class="auth-logo">
+                    <h1 class="auth-title">Create Account</h1>
+                    <p class="auth-subtitle">Step 1: Personal Information</p>
                 </div>
-                ${authState.errors.name ? `<div class="error-message"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>${authState.errors.name}</div>` : ''}
-            </div>
-            
-            <div class="form-group">
-                <label class="form-label">Personal Email <span class="required">*</span></label>
-                <div class="input-wrapper">
-                    <input type="email" 
-                           id="signupPersonalEmail" 
-                           class="form-input ${authState.errors.personalEmail ? 'error' : ''}"
-                           placeholder="john@email.com"
-                           value="${signupData.personalEmail}"
-                           onkeypress="trackKeyPress(event)"
-                           oninput="signupData.personalEmail = this.value">
-                    <span class="input-icon">
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
-                            <polyline points="22,6 12,13 2,6"/>
-                        </svg>
-                    </span>
+                
+                <div class="progress-bar">
+                    <div class="progress-step active">1</div>
+                    <div class="progress-line"></div>
+                    <div class="progress-step">2</div>
+                    <div class="progress-line"></div>
+                    <div class="progress-step">3</div>
                 </div>
-                ${authState.errors.personalEmail ? `<div class="error-message"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>${authState.errors.personalEmail}</div>` : ''}
-            </div>
-            
-            <div class="form-group">
-                <label class="form-label">Personal Mobile <span class="required">*</span></label>
-                <div class="input-wrapper">
-                    <input type="tel" 
-                           id="signupPersonalMobile" 
-                           class="form-input ${authState.errors.personalMobile ? 'error' : ''}"
-                           placeholder="07123 456789"
-                           value="${signupData.personalMobile}"
-                           onkeypress="trackKeyPress(event)"
-                           oninput="signupData.personalMobile = this.value">
-                    <span class="input-icon">
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/>
-                        </svg>
-                    </span>
+                
+                <div class="auth-content">
+                    ${authState.errors.general ? `<div class="auth-error-banner">${authState.errors.general}</div>` : ''}
+                    
+                    <div class="form-group">
+                        <label for="name">Full Name *</label>
+                        <input 
+                            type="text" 
+                            id="name" 
+                            class="auth-input ${authState.errors.name ? 'error' : ''}"
+                            placeholder="John Smith"
+                            value="${signupData.name}"
+                            onchange="signupData.name = this.value"
+                        >
+                        ${authState.errors.name ? `<span class="error-text">${authState.errors.name}</span>` : ''}
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="personalEmail">Personal Email *</label>
+                        <input 
+                            type="email" 
+                            id="personalEmail" 
+                            class="auth-input ${authState.errors.personalEmail ? 'error' : ''}"
+                            placeholder="john@personal.com"
+                            value="${signupData.personalEmail}"
+                            onchange="signupData.personalEmail = this.value"
+                        >
+                        ${authState.errors.personalEmail ? `<span class="error-text">${authState.errors.personalEmail}</span>` : ''}
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="personalMobile">Mobile Number *</label>
+                        <input 
+                            type="tel" 
+                            id="personalMobile" 
+                            class="auth-input ${authState.errors.personalMobile ? 'error' : ''}"
+                            placeholder="07700 900123"
+                            value="${signupData.personalMobile}"
+                            onchange="signupData.personalMobile = this.value"
+                        >
+                        ${authState.errors.personalMobile ? `<span class="error-text">${authState.errors.personalMobile}</span>` : ''}
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="address">Address *</label>
+                        <textarea 
+                            id="address" 
+                            class="auth-input ${authState.errors.address ? 'error' : ''}"
+                            placeholder="123 Main Street, Edinburgh, EH1 1AA"
+                            rows="3"
+                            onchange="signupData.address = this.value"
+                        >${signupData.address}</textarea>
+                        ${authState.errors.address ? `<span class="error-text">${authState.errors.address}</span>` : ''}
+                    </div>
+                    
+                    <div class="auth-buttons">
+                        <button class="auth-btn secondary" onclick="showInitialView()">
+                            Back
+                        </button>
+                        <button class="auth-btn primary" onclick="handleStep1Next()">
+                            Next →
+                        </button>
+                    </div>
                 </div>
-                ${authState.errors.personalMobile ? `<div class="error-message"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>${authState.errors.personalMobile}</div>` : ''}
-            </div>
-            
-            <div class="form-group">
-                <label class="form-label">Address <span class="required">*</span></label>
-                <textarea id="signupAddress" 
-                          class="form-textarea ${authState.errors.address ? 'error' : ''}"
-                          placeholder="123 Main Street, City, Postcode"
-                          onkeypress="trackKeyPress(event)"
-                          oninput="signupData.address = this.value">${signupData.address}</textarea>
-                ${authState.errors.address ? `<div class="error-message"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>${authState.errors.address}</div>` : ''}
-            </div>
-            
-            ${authState.errors.general ? `<div class="alert error"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>${authState.errors.general}</div>` : ''}
-            
-            <div class="btn-group">
-                <button class="auth-btn primary" onclick="handleSignupStep1Next()">
-                    Continue
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <line x1="5" y1="12" x2="19" y2="12"/>
-                        <polyline points="12 5 19 12 12 19"/>
-                    </svg>
-                </button>
-                <button class="auth-btn secondary" onclick="showInitialView()">
-                    Back
-                </button>
             </div>
         </div>
     `;
@@ -809,134 +1083,104 @@ function renderSignupStep2() {
     ).join('');
     
     return `
-        <div class="auth-header">
-            <h1 class="auth-title">Create Account</h1>
-            <p class="auth-subtitle">Step 2: Business Information</p>
-        </div>
-        
-        ${renderProgressSteps(2)}
-        
-        <div class="auth-form form-section">
-            <div class="form-group">
-                <label class="form-label">Company Name <span class="required">*</span></label>
-                <div class="input-wrapper">
-                    <input type="text" 
-                           id="signupCompanyName" 
-                           class="form-input ${authState.errors.companyName ? 'error' : ''}"
-                           placeholder="Smith Plumbing Ltd"
-                           value="${signupData.companyName}"
-                           onkeypress="trackKeyPress(event)"
-                           oninput="signupData.companyName = this.value">
-                    <span class="input-icon">
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
-                            <polyline points="9 22 9 12 15 12 15 22"/>
-                        </svg>
-                    </span>
+        <div class="auth-container">
+            <div class="auth-card">
+                <div class="auth-header">
+                    <img src="https://github.com/connecttraderbrothers/omega.app.icon/blob/main/icon-512x512.png?raw=true" alt="OMEGA" class="auth-logo">
+                    <h1 class="auth-title">Create Account</h1>
+                    <p class="auth-subtitle">Step 2: Business Information</p>
                 </div>
-                ${authState.errors.companyName ? `<div class="error-message"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>${authState.errors.companyName}</div>` : ''}
-            </div>
-            
-            <div class="form-group">
-                <label class="form-label">Business Email <span class="required">*</span></label>
-                <div class="input-wrapper">
-                    <input type="email" 
-                           id="signupBusinessEmail" 
-                           class="form-input ${authState.errors.businessEmail ? 'error' : ''}"
-                           placeholder="info@smithplumbing.com"
-                           value="${signupData.businessEmail}"
-                           onkeypress="trackKeyPress(event)"
-                           oninput="signupData.businessEmail = this.value">
-                    <span class="input-icon">
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
-                            <polyline points="22,6 12,13 2,6"/>
-                        </svg>
-                    </span>
+                
+                <div class="progress-bar">
+                    <div class="progress-step completed">✓</div>
+                    <div class="progress-line completed"></div>
+                    <div class="progress-step active">2</div>
+                    <div class="progress-line"></div>
+                    <div class="progress-step">3</div>
                 </div>
-                <small style="color: #666; font-size: 11px;">This will be used for login</small>
-                ${authState.errors.businessEmail ? `<div class="error-message"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>${authState.errors.businessEmail}</div>` : ''}
-            </div>
-            
-            <div class="form-group">
-                <label class="form-label">Business Mobile <span class="required">*</span></label>
-                <div class="input-wrapper">
-                    <input type="tel" 
-                           id="signupBusinessMobile" 
-                           class="form-input ${authState.errors.businessMobile ? 'error' : ''}"
-                           placeholder="07987 654321"
-                           value="${signupData.businessMobile}"
-                           onkeypress="trackKeyPress(event)"
-                           oninput="signupData.businessMobile = this.value">
-                    <span class="input-icon">
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/>
-                        </svg>
-                    </span>
-                </div>
-                ${authState.errors.businessMobile ? `<div class="error-message"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>${authState.errors.businessMobile}</div>` : ''}
-            </div>
-            
-            <div class="form-group">
-                <label class="form-label">Trade/Niche <span class="required">*</span></label>
-                <div class="input-wrapper">
-                    <select id="signupNiche" 
-                            class="form-select ${authState.errors.niche ? 'error' : ''}"
-                            onchange="signupData.niche = this.value">
-                        <option value="">Select your trade...</option>
-                        ${nicheOptions}
-                    </select>
-                    <span class="input-icon">
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <polyline points="6 9 12 15 18 9"/>
-                        </svg>
-                    </span>
-                </div>
-                ${authState.errors.niche ? `<div class="error-message"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>${authState.errors.niche}</div>` : ''}
-            </div>
-            
-            <div class="form-group">
-                <label class="form-label">Company Logo (Optional)</label>
-                <div class="logo-upload">
-                    ${signupData.companyLogo ? `
-                        <div class="logo-preview">
-                            <img src="${signupData.companyLogo}" alt="Company Logo">
-                            <button type="button" class="logo-remove" onclick="removeCompanyLogo()">
-                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                    <line x1="18" y1="6" x2="6" y2="18"/>
-                                    <line x1="6" y1="6" x2="18" y2="18"/>
-                                </svg>
-                            </button>
+                
+                <div class="auth-content">
+                    ${authState.errors.general ? `<div class="auth-error-banner">${authState.errors.general}</div>` : ''}
+                    
+                    <div class="form-group">
+                        <label for="companyName">Company Name *</label>
+                        <input 
+                            type="text" 
+                            id="companyName" 
+                            class="auth-input ${authState.errors.companyName ? 'error' : ''}"
+                            placeholder="Smith Plumbing Ltd"
+                            value="${signupData.companyName}"
+                            onchange="signupData.companyName = this.value"
+                        >
+                        ${authState.errors.companyName ? `<span class="error-text">${authState.errors.companyName}</span>` : ''}
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="businessEmail">Business Email *</label>
+                        <input 
+                            type="email" 
+                            id="businessEmail" 
+                            class="auth-input ${authState.errors.businessEmail ? 'error' : ''}"
+                            placeholder="info@smithplumbing.com"
+                            value="${signupData.businessEmail}"
+                            onchange="signupData.businessEmail = this.value"
+                        >
+                        ${authState.errors.businessEmail ? `<span class="error-text">${authState.errors.businessEmail}</span>` : ''}
+                        <span class="help-text">OTP will be sent to this email</span>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="businessMobile">Business Phone *</label>
+                        <input 
+                            type="tel" 
+                            id="businessMobile" 
+                            class="auth-input ${authState.errors.businessMobile ? 'error' : ''}"
+                            placeholder="0131 123 4567"
+                            value="${signupData.businessMobile}"
+                            onchange="signupData.businessMobile = this.value"
+                        >
+                        ${authState.errors.businessMobile ? `<span class="error-text">${authState.errors.businessMobile}</span>` : ''}
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="niche">Trade / Niche *</label>
+                        <select 
+                            id="niche" 
+                            class="auth-input ${authState.errors.niche ? 'error' : ''}"
+                            onchange="signupData.niche = this.value"
+                        >
+                            <option value="">Select your trade...</option>
+                            ${nicheOptions}
+                        </select>
+                        ${authState.errors.niche ? `<span class="error-text">${authState.errors.niche}</span>` : ''}
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Company Logo (Optional)</label>
+                        <div class="logo-upload-area" onclick="document.getElementById('logoUpload').click()">
+                            ${signupData.companyLogo ? 
+                                `<img src="${signupData.companyLogo}" class="uploaded-logo" alt="Logo">
+                                 <button class="remove-logo" onclick="event.stopPropagation(); removeCompanyLogo()">×</button>` : 
+                                `<div class="upload-placeholder">
+                                    <span class="upload-icon">📷</span>
+                                    <span>Click to upload logo</span>
+                                    <span class="upload-hint">PNG, JPG up to 5MB</span>
+                                </div>`
+                            }
                         </div>
-                    ` : `
-                        <label for="logoUpload" class="logo-upload-area">
-                            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-                                <polyline points="17 8 12 3 7 8"/>
-                                <line x1="12" y1="3" x2="12" y2="15"/>
-                            </svg>
-                            <span>Click to upload logo</span>
-                            <small>PNG, JPG up to 5MB</small>
-                        </label>
-                        <input type="file" id="logoUpload" accept="image/*" style="display: none" onchange="handleLogoUpload(event)">
-                    `}
+                        <input type="file" id="logoUpload" accept="image/*" style="display:none" onchange="handleLogoUpload(event)">
+                        ${authState.errors.logo ? `<span class="error-text">${authState.errors.logo}</span>` : ''}
+                    </div>
+                    
+                    <div class="auth-buttons">
+                        <button class="auth-btn secondary" onclick="showSignupStep1()">
+                            ← Back
+                        </button>
+                        <button class="auth-btn primary" onclick="handleStep2Next()">
+                            Next →
+                        </button>
+                    </div>
                 </div>
-                ${authState.errors.logo ? `<div class="error-message"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>${authState.errors.logo}</div>` : ''}
-            </div>
-            
-            ${authState.errors.general ? `<div class="alert error"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>${authState.errors.general}</div>` : ''}
-            
-            <div class="btn-group">
-                <button class="auth-btn primary" onclick="handleSignupStep2Next()">
-                    Continue
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <line x1="5" y1="12" x2="19" y2="12"/>
-                        <polyline points="12 5 19 12 12 19"/>
-                    </svg>
-                </button>
-                <button class="auth-btn secondary" onclick="showSignupStep1()">
-                    Back
-                </button>
             </div>
         </div>
     `;
@@ -944,163 +1188,230 @@ function renderSignupStep2() {
 
 function renderSignupStep3() {
     return `
-        <div class="auth-header">
-            <h1 class="auth-title">Create Account</h1>
-            <p class="auth-subtitle">Step 3: Bank Details (for Invoices)</p>
-        </div>
-        
-        ${renderProgressSteps(3)}
-        
-        <div class="auth-form form-section">
-            <div class="alert info">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <circle cx="12" cy="12" r="10"/>
-                    <line x1="12" y1="16" x2="12" y2="12"/>
-                    <line x1="12" y1="8" x2="12.01" y2="8"/>
-                </svg>
-                These details will appear on your invoices for client payments
-            </div>
-            
-            <div class="form-group">
-                <label class="form-label">Bank Name <span class="required">*</span></label>
-                <div class="input-wrapper">
-                    <input type="text" 
-                           id="signupBankName" 
-                           class="form-input ${authState.errors.bankName ? 'error' : ''}"
-                           placeholder="e.g. Barclays, HSBC, Lloyds"
-                           value="${signupData.bankName}"
-                           onkeypress="trackKeyPress(event)"
-                           oninput="signupData.bankName = this.value">
-                    <span class="input-icon">
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <rect x="1" y="3" width="15" height="13" rx="2"/>
-                            <path d="M10 3v13"/>
-                            <path d="M18 12h4"/>
-                            <path d="M18 8h4"/>
-                            <path d="M18 16h4"/>
-                        </svg>
-                    </span>
-                </div>
-                ${authState.errors.bankName ? `<div class="error-message"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>${authState.errors.bankName}</div>` : ''}
-            </div>
-            
-            <div class="form-group">
-                <label class="form-label">Account Name <span class="required">*</span></label>
-                <div class="input-wrapper">
-                    <input type="text" 
-                           id="signupAccountName" 
-                           class="form-input ${authState.errors.accountName ? 'error' : ''}"
-                           placeholder="Name on the account"
-                           value="${signupData.accountName}"
-                           onkeypress="trackKeyPress(event)"
-                           oninput="signupData.accountName = this.value">
-                    <span class="input-icon">
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
-                            <circle cx="12" cy="7" r="4"/>
-                        </svg>
-                    </span>
-                </div>
-                ${authState.errors.accountName ? `<div class="error-message"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>${authState.errors.accountName}</div>` : ''}
-            </div>
-            
-            <div class="form-row">
-                <div class="form-group">
-                    <label class="form-label">Sort Code <span class="required">*</span></label>
-                    <input type="text" 
-                           id="signupSortCode" 
-                           class="form-input ${authState.errors.sortCode ? 'error' : ''}"
-                           placeholder="00-00-00"
-                           value="${signupData.sortCode}"
-                           maxlength="8"
-                           onkeypress="trackKeyPress(event)"
-                           oninput="signupData.sortCode = this.value">
-                    ${authState.errors.sortCode ? `<div class="error-message"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>${authState.errors.sortCode}</div>` : ''}
+        <div class="auth-container">
+            <div class="auth-card">
+                <div class="auth-header">
+                    <img src="https://github.com/connecttraderbrothers/omega.app.icon/blob/main/icon-512x512.png?raw=true" alt="OMEGA" class="auth-logo">
+                    <h1 class="auth-title">Create Account</h1>
+                    <p class="auth-subtitle">Step 3: Bank Details (for Invoices)</p>
                 </div>
                 
-                <div class="form-group">
-                    <label class="form-label">Account Number <span class="required">*</span></label>
-                    <input type="text" 
-                           id="signupAccountNumber" 
-                           class="form-input ${authState.errors.accountNumber ? 'error' : ''}"
-                           placeholder="12345678"
-                           value="${signupData.accountNumber}"
-                           maxlength="8"
-                           onkeypress="trackKeyPress(event)"
-                           oninput="signupData.accountNumber = this.value">
-                    ${authState.errors.accountNumber ? `<div class="error-message"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>${authState.errors.accountNumber}</div>` : ''}
+                <div class="progress-bar">
+                    <div class="progress-step completed">✓</div>
+                    <div class="progress-line completed"></div>
+                    <div class="progress-step completed">✓</div>
+                    <div class="progress-line completed"></div>
+                    <div class="progress-step active">3</div>
                 </div>
-            </div>
-            
-            <div class="checkbox-wrapper">
-                <input type="checkbox" id="rememberMeSignup" class="checkbox-input" ${authState.rememberMe ? 'checked' : ''} onchange="authState.rememberMe = this.checked">
-                <label for="rememberMeSignup" class="checkbox-label">Remember me on this device</label>
-            </div>
-            
-            ${authState.errors.general ? `<div class="alert error"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>${authState.errors.general}</div>` : ''}
-            
-            <div class="btn-group">
-                <button class="auth-btn success" onclick="handleSignupStep3Submit()" ${authState.isLoading ? 'disabled' : ''}>
-                    ${authState.isLoading ? '<span class="spinner"></span> Processing...' : 'Create Account'}
-                </button>
-                <button class="auth-btn secondary" onclick="showSignupStep2()">
-                    Back
-                </button>
+                
+                <div class="auth-content">
+                    ${authState.errors.general ? `<div class="auth-error-banner">${authState.errors.general}</div>` : ''}
+                    
+                    <div class="bank-info-notice">
+                        <span class="info-icon">🔒</span>
+                        <p>Your bank details are stored securely and only used to display on your invoices for client payments.</p>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="bankName">Bank Name *</label>
+                        <input 
+                            type="text" 
+                            id="bankName" 
+                            class="auth-input ${authState.errors.bankName ? 'error' : ''}"
+                            placeholder="Bank of Scotland"
+                            value="${signupData.bankName}"
+                            onchange="signupData.bankName = this.value"
+                        >
+                        ${authState.errors.bankName ? `<span class="error-text">${authState.errors.bankName}</span>` : ''}
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="accountName">Account Name *</label>
+                        <input 
+                            type="text" 
+                            id="accountName" 
+                            class="auth-input ${authState.errors.accountName ? 'error' : ''}"
+                            placeholder="Smith Plumbing Ltd"
+                            value="${signupData.accountName}"
+                            onchange="signupData.accountName = this.value"
+                        >
+                        ${authState.errors.accountName ? `<span class="error-text">${authState.errors.accountName}</span>` : ''}
+                    </div>
+                    
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="sortCode">Sort Code *</label>
+                            <input 
+                                type="text" 
+                                id="sortCode" 
+                                class="auth-input ${authState.errors.sortCode ? 'error' : ''}"
+                                placeholder="80-12-34"
+                                value="${signupData.sortCode}"
+                                onchange="signupData.sortCode = this.value"
+                                maxlength="8"
+                            >
+                            ${authState.errors.sortCode ? `<span class="error-text">${authState.errors.sortCode}</span>` : ''}
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="accountNumber">Account Number *</label>
+                            <input 
+                                type="text" 
+                                id="accountNumber" 
+                                class="auth-input ${authState.errors.accountNumber ? 'error' : ''}"
+                                placeholder="12345678"
+                                value="${signupData.accountNumber}"
+                                onchange="signupData.accountNumber = this.value"
+                                maxlength="8"
+                            >
+                            ${authState.errors.accountNumber ? `<span class="error-text">${authState.errors.accountNumber}</span>` : ''}
+                        </div>
+                    </div>
+                    
+                    <div class="auth-buttons">
+                        <button class="auth-btn secondary" onclick="showSignupStep2()">
+                            ← Back
+                        </button>
+                        <button class="auth-btn success" onclick="handleSignupSubmit()" ${authState.isLoading ? 'disabled' : ''}>
+                            ${authState.isLoading ? '<span class="spinner"></span> Creating...' : 'Create Account'}
+                        </button>
+                    </div>
+                </div>
             </div>
         </div>
     `;
 }
 
-function renderVerifyView() {
+function renderVerifySignup() {
     return `
-        <div class="auth-header">
-            <div class="success-icon">
-                <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
-                    <polyline points="22,6 12,13 2,6"/>
-                </svg>
-            </div>
-            <h1 class="auth-title">Check Your Email</h1>
-            <div class="passcode-sent-to">
-                <p>We've sent a 6-digit code to</p>
-                <p class="email">${authState.email}</p>
-                <p class="expires">Code expires in 5 minutes</p>
+        <div class="auth-container">
+            <div class="auth-card">
+                <div class="auth-header">
+                    <img src="https://github.com/connecttraderbrothers/omega.app.icon/blob/main/icon-512x512.png?raw=true" alt="OMEGA" class="auth-logo">
+                    <h1 class="auth-title">Verify Your Email</h1>
+                    <p class="auth-subtitle">Enter the 6-digit code sent to</p>
+                    <p class="auth-email">${authState.email}</p>
+                </div>
+                
+                <div class="auth-content">
+                    ${authState.errors.general ? `<div class="auth-error-banner">${authState.errors.general}</div>` : ''}
+                    ${authState.errors.success ? `<div class="auth-success-banner">${authState.errors.success}</div>` : ''}
+                    
+                    <div class="otp-section">
+                        <div class="form-group">
+                            <input 
+                                type="text" 
+                                id="otpInput" 
+                                class="auth-input otp-input ${authState.errors.otp ? 'error' : ''}"
+                                placeholder="000000"
+                                maxlength="6"
+                                inputmode="numeric"
+                                pattern="[0-9]*"
+                                oninput="handleOTPInput(this)"
+                                ${authState.isLoading ? 'disabled' : ''}
+                            >
+                            ${authState.errors.otp ? `<span class="error-text">${authState.errors.otp}</span>` : ''}
+                        </div>
+                        
+                        <div class="attempts-info">
+                            ${authState.otpAttemptsRemaining} attempt${authState.otpAttemptsRemaining !== 1 ? 's' : ''} remaining
+                        </div>
+                    </div>
+                    
+                    ${authState.showResendButton ? `
+                        <button class="auth-btn primary" onclick="handleResendCode()" ${authState.isLoading ? 'disabled' : ''}>
+                            ${authState.isLoading ? '<span class="spinner"></span> Sending...' : 'Resend Code'}
+                        </button>
+                    ` : `
+                        <button class="auth-btn primary" onclick="handleSignupOTPVerify()" ${authState.isLoading ? 'disabled' : ''}>
+                            ${authState.isLoading ? '<span class="spinner"></span> Verifying...' : 'Verify Code'}
+                        </button>
+                    `}
+                    
+                    <div class="resend-section">
+                        <p>Didn't receive the code?</p>
+                        ${!authState.showResendButton ? `
+                            <a href="#" onclick="handleResendCode(); return false;">Resend Code</a>
+                        ` : ''}
+                    </div>
+                </div>
+                
+                <div class="auth-back">
+                    <a href="#" onclick="showSignupStep3(); return false;">← Back to Details</a>
+                </div>
             </div>
         </div>
-        
-        <div class="auth-form">
-            <div class="form-group">
-                <label class="form-label">Enter Verification Code</label>
-                <input type="text" 
-                       id="passcodeInput" 
-                       class="passcode-input ${authState.errors.passcode ? 'error' : ''}"
-                       inputmode="numeric"
-                       maxlength="6"
-                       placeholder="000000"
-                       onkeypress="trackKeyPress(event)"
-                       oninput="handlePasscodeInput(this)"
-                       onkeyup="if(event.key === 'Enter') handleVerifyPasscode()"
-                       ${authState.isLoading ? 'disabled' : ''}>
-                ${authState.errors.passcode ? `<div class="error-message" style="justify-content: center; margin-top: 8px;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>${authState.errors.passcode}</div>` : ''}
-            </div>
-            
-            <div class="btn-group">
-                <button class="auth-btn primary" onclick="handleVerifyPasscode()" ${authState.isLoading ? 'disabled' : ''}>
-                    ${authState.isLoading ? '<span class="spinner"></span> Verifying...' : 'Verify & Continue'}
-                </button>
-                <button class="auth-btn outline" onclick="handleResendPasscode()" ${authState.isLoading ? 'disabled' : ''}>
-                    Resend Code
-                </button>
-                <button class="auth-btn secondary" onclick="goBackFromVerify()">
-                    Back
-                </button>
+    `;
+}
+
+function renderVerifyLogin() {
+    return `
+        <div class="auth-container">
+            <div class="auth-card">
+                <div class="auth-header">
+                    <img src="https://github.com/connecttraderbrothers/omega.app.icon/blob/main/icon-512x512.png?raw=true" alt="OMEGA" class="auth-logo">
+                    <h1 class="auth-title">Enter Login Code</h1>
+                    <p class="auth-subtitle">Enter the 6-digit code sent to</p>
+                    <p class="auth-email">${authState.email}</p>
+                </div>
+                
+                <div class="auth-content">
+                    ${authState.errors.general ? `<div class="auth-error-banner">${authState.errors.general}</div>` : ''}
+                    ${authState.errors.success ? `<div class="auth-success-banner">${authState.errors.success}</div>` : ''}
+                    
+                    <div class="otp-section">
+                        <div class="form-group">
+                            <input 
+                                type="text" 
+                                id="otpInput" 
+                                class="auth-input otp-input ${authState.errors.otp ? 'error' : ''}"
+                                placeholder="000000"
+                                maxlength="6"
+                                inputmode="numeric"
+                                pattern="[0-9]*"
+                                oninput="handleOTPInput(this)"
+                                ${authState.isLoading ? 'disabled' : ''}
+                            >
+                            ${authState.errors.otp ? `<span class="error-text">${authState.errors.otp}</span>` : ''}
+                        </div>
+                        
+                        <div class="attempts-info">
+                            ${authState.otpAttemptsRemaining} attempt${authState.otpAttemptsRemaining !== 1 ? 's' : ''} remaining
+                        </div>
+                    </div>
+                    
+                    ${authState.showCreateAccountButton ? `
+                        <button class="auth-btn primary" onclick="handleCreateAccountRedirect()">
+                            Create Account
+                        </button>
+                    ` : authState.showResendButton ? `
+                        <button class="auth-btn primary" onclick="handleResendCode()" ${authState.isLoading ? 'disabled' : ''}>
+                            ${authState.isLoading ? '<span class="spinner"></span> Sending...' : 'Resend Code'}
+                        </button>
+                    ` : `
+                        <button class="auth-btn primary" onclick="handleLoginOTPVerify()" ${authState.isLoading ? 'disabled' : ''}>
+                            ${authState.isLoading ? '<span class="spinner"></span> Verifying...' : 'Login'}
+                        </button>
+                    `}
+                    
+                    <div class="resend-section">
+                        <p>Didn't receive the code?</p>
+                        ${!authState.showResendButton && !authState.showCreateAccountButton ? `
+                            <a href="#" onclick="handleResendCode(); return false;">Resend Code</a>
+                        ` : ''}
+                    </div>
+                </div>
+                
+                <div class="auth-back">
+                    <a href="#" onclick="showLoginView(); return false;">← Back to Login</a>
+                </div>
             </div>
         </div>
     `;
 }
 
 // ============================================
-// EVENT HANDLERS
+// NAVIGATION FUNCTIONS
 // ============================================
 
 function showInitialView() {
@@ -1112,17 +1423,15 @@ function showInitialView() {
 function showLoginView() {
     authState.currentView = 'login';
     authState.errors = {};
+    authState.flowType = 'login';
     renderAuthScreen();
-    setTimeout(() => {
-        const emailInput = document.getElementById('loginEmail');
-        if (emailInput) emailInput.focus();
-    }, 100);
 }
 
 function showSignupStep1() {
     authState.currentView = 'signup-step1';
     authState.signupStep = 1;
     authState.errors = {};
+    authState.flowType = 'signup';
     renderAuthScreen();
 }
 
@@ -1140,65 +1449,35 @@ function showSignupStep3() {
     renderAuthScreen();
 }
 
-function handleSignupStep1Next() {
+function handleStep1Next() {
     if (validateStep1()) {
         showSignupStep2();
     }
 }
 
-function handleSignupStep2Next() {
+function handleStep2Next() {
     if (validateStep2()) {
         showSignupStep3();
     }
 }
 
-async function handleSignupStep3Submit() {
-    if (!validateStep3()) return;
-    
-    if (detectBot()) {
-        authState.errors = { general: 'Suspicious activity detected. Please try again.' };
-        renderAuthScreen();
-        return;
-    }
-    
-    // Send passcode to business email
-    authState.email = signupData.businessEmail;
-    const success = await handleSendPasscode(signupData.businessEmail);
-}
+// ============================================
+// HELPER FUNCTIONS
+// ============================================
 
-function handleLoginSubmit() {
-    const email = document.getElementById('loginEmail').value;
-    const error = validateEmail(email);
-    
-    if (error) {
-        authState.errors = { email: error };
-        renderAuthScreen();
-        return;
-    }
-    
-    handleSendPasscode(email);
-}
-
-function handlePasscodeInput(input) {
+function handleOTPInput(input) {
     // Only allow numbers
     input.value = input.value.replace(/\D/g, '');
     
     // Auto-submit when 6 digits entered
     if (input.value.length === 6) {
-        setTimeout(() => handleVerifyPasscode(), 300);
-    }
-}
-
-async function handleResendPasscode() {
-    authState.errors = {};
-    await handleSendPasscode(authState.email);
-}
-
-function goBackFromVerify() {
-    if (authState.signupStep === 3) {
-        showSignupStep3();
-    } else {
-        showLoginView();
+        setTimeout(() => {
+            if (authState.flowType === 'signup') {
+                handleSignupOTPVerify();
+            } else {
+                handleLoginOTPVerify();
+            }
+        }, 300);
     }
 }
 
@@ -1223,54 +1502,24 @@ function handleLogoUpload(event) {
 
 function removeCompanyLogo() {
     signupData.companyLogo = null;
+    document.getElementById('logoUpload').value = '';
     renderAuthScreen();
 }
 
-function renderErrors() {
-    // Update error displays without full re-render
-    Object.keys(authState.errors).forEach(field => {
-        const input = document.getElementById(`signup${field.charAt(0).toUpperCase() + field.slice(1)}`);
-        if (input) {
-            input.classList.add('error');
-        }
-    });
-}
-
-function attachAuthEventListeners() {
-    // Add any additional event listeners here
-}
-
 function showAuthSuccess(message, callback) {
-    const authCard = document.querySelector('.auth-card');
-    if (!authCard) return;
-    
-    authCard.innerHTML = `
-        <div class="security-badge">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
-            </svg>
-            Secure Connection
-        </div>
-        <div class="auth-header" style="padding: 40px 0;">
-            <div class="success-icon">
-                <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <polyline points="20 6 9 17 4 12"/>
-                </svg>
+    const authScreen = document.getElementById('authScreen');
+    authScreen.innerHTML = `
+        <div class="auth-container">
+            <div class="auth-card success-card">
+                <div class="success-icon">✓</div>
+                <h2>${message}</h2>
+                <p>Redirecting to dashboard...</p>
             </div>
-            <h1 class="auth-title">${message}</h1>
-            <p class="auth-subtitle">Redirecting to dashboard...</p>
-        </div>
-        <div class="auth-footer">
-            <p>OMEGA Professional Tools</p>
         </div>
     `;
     
-    setTimeout(callback, 2000);
+    setTimeout(callback, 1500);
 }
-
-// ============================================
-// AUTH SCREEN VISIBILITY
-// ============================================
 
 function showAuthScreen() {
     const authScreen = document.getElementById('authScreen');
@@ -1288,7 +1537,7 @@ function hideAuthScreen() {
 }
 
 // ============================================
-// LOGOUT FUNCTION
+// LOGOUT
 // ============================================
 
 function logout() {
@@ -1297,6 +1546,10 @@ function logout() {
     authState.userId = '';
     authState.userData = null;
     authState.currentView = 'initial';
+    authState.otpAttempts = 0;
+    authState.otpAttemptsRemaining = 3;
+    authState.showResendButton = false;
+    authState.showCreateAccountButton = false;
     
     // Clear localStorage (keep remembered email if set)
     localStorage.removeItem('omegaAuthenticated');
@@ -1328,17 +1581,17 @@ async function initAuth() {
     
     if (isAuthenticated && storedEmail) {
         try {
-            // Always fetch fresh data from the database (Webhook #4)
-            const userData = await getUserDataFromWebhook(storedEmail, storedUserId);
+            // Fetch fresh data from the database (Webhook #3)
+            const result = await webhookGetUserDetails(storedEmail);
             
-            if (userData && userData.success !== false) {
+            if (result.status === 'success' && result.user) {
                 authState.isAuthenticated = true;
-                authState.userData = userData;
-                authState.userId = userData.userId || storedUserId;
+                authState.userData = result.user;
+                authState.userId = result.user.user_id || storedUserId;
                 authState.email = storedEmail;
                 
                 // Update global user data for quotes/invoices
-                updateGlobalUserData(userData);
+                updateGlobalUserData(result.user);
                 
                 return true; // User is logged in with fresh data
             } else {
