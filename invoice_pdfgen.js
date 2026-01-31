@@ -366,7 +366,7 @@ function downloadInvoice() {
             updateInvoiceCounter();
 
             setTimeout(function() {
-                alert('âœ“ Invoice PDF downloaded successfully!\n\nFile: ' + filename);
+                alert('Invoice PDF downloaded successfully!\n\nFile: ' + filename);
             }, 200);
         })
         .catch(function(error) {
