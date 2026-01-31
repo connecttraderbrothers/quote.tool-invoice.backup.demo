@@ -515,7 +515,7 @@ async function downloadQuote() {
         updateEstimateCounter();
 
         setTimeout(function() {
-            alert('âœ“ PDF downloaded successfully!\n\nFile: ' + filename);
+            alert('PDF downloaded successfully!\n\nFile: ' + filename);
         }, 200);
 
     } catch (error) {
