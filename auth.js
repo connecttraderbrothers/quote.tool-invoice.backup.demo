@@ -7,16 +7,16 @@
 const WEBHOOK_CONFIG = {
     // Webhook #1: Account Creation - Stores details and sends OTP
     // Also used for Login OTP request and Resend Code
-    ACCOUNT_CREATE_OTP: 'https://hook.eu1.make.com/ohdm5yreraugif6kdck4bj7oo8y62g67',
+    ACCOUNT_CREATE_OTP: 'YOUR_MAKE_COM_WEBHOOK_1_URL',
     
     // Webhook #2: Account Creation - Validates OTP
-    ACCOUNT_VALIDATE_OTP: 'https://hook.eu1.make.com/8et2d1wlqf8avecki8x6q9uci9o3sqxf',
+    ACCOUNT_VALIDATE_OTP: 'YOUR_MAKE_COM_WEBHOOK_2_URL',
     
     // Webhook #3: Get User Details (after account creation)
-    GET_USER_DETAILS: 'https://hook.eu1.make.com/fcanehdltyyrdxspj0y6ssavhkao8gdv',
+    GET_USER_DETAILS: 'YOUR_MAKE_COM_WEBHOOK_3_URL',
     
     // Webhook #4: Login Validation - Validates OTP and returns user data
-    LOGIN_VALIDATE: 'https://hook.eu1.make.com/ck0c68qcw69edyx9a84ahfw74lfmjf6w'
+    LOGIN_VALIDATE: 'YOUR_MAKE_COM_WEBHOOK_4_URL'
 };
 
 // ============================================
@@ -209,7 +209,7 @@ async function webhookAccountCreateOTP(userData, requestType = 'Account creation
         const otp = generatePasscode();
         const otpExpiresAt = new Date(Date.now() + 5 * 60 * 1000).toISOString();
         
-        console.log('📧 Webhook #1: Sending account details and OTP:', otp);
+        console.log('ðŸ“§ Webhook #1: Sending account details and OTP:', otp);
         
         const response = await fetch(WEBHOOK_CONFIG.ACCOUNT_CREATE_OTP, {
             method: 'POST',
@@ -251,7 +251,7 @@ async function webhookLoginOTPRequest(email) {
         const otp = generatePasscode();
         const otpExpiresAt = new Date(Date.now() + 5 * 60 * 1000).toISOString();
         
-        console.log('📧 Webhook #1: Sending login OTP request for', email, 'OTP:', otp);
+        console.log('ðŸ“§ Webhook #1: Sending login OTP request for', email, 'OTP:', otp);
         
         const response = await fetch(WEBHOOK_CONFIG.ACCOUNT_CREATE_OTP, {
             method: 'POST',
@@ -293,7 +293,7 @@ async function webhookResendCode(email, requestType) {
         const otp = generatePasscode();
         const otpExpiresAt = new Date(Date.now() + 5 * 60 * 1000).toISOString();
         
-        console.log('📧 Webhook #1: Resending OTP for', email, 'New OTP:', otp);
+        console.log('ðŸ“§ Webhook #1: Resending OTP for', email, 'New OTP:', otp);
         
         const response = await fetch(WEBHOOK_CONFIG.ACCOUNT_CREATE_OTP, {
             method: 'POST',
@@ -332,7 +332,7 @@ async function webhookResendCode(email, requestType) {
 // Webhook #2: Account Creation - Validate OTP
 async function webhookAccountValidateOTP(email, otp, attemptCount) {
     try {
-        console.log('🔐 Webhook #2: Validating signup OTP, attempt', attemptCount);
+        console.log('ðŸ” Webhook #2: Validating signup OTP, attempt', attemptCount);
         
         const response = await fetch(WEBHOOK_CONFIG.ACCOUNT_VALIDATE_OTP, {
             method: 'POST',
@@ -369,7 +369,7 @@ async function webhookAccountValidateOTP(email, otp, attemptCount) {
 // Webhook #3: Get User Details
 async function webhookGetUserDetails(email) {
     try {
-        console.log('👤 Webhook #3: Getting user details for', email);
+        console.log('ðŸ‘¤ Webhook #3: Getting user details for', email);
         
         const response = await fetch(WEBHOOK_CONFIG.GET_USER_DETAILS, {
             method: 'POST',
@@ -396,7 +396,7 @@ async function webhookGetUserDetails(email) {
 // Webhook #4: Login Validation - Validate OTP and return user data
 async function webhookLoginValidate(email, otp, attemptCount) {
     try {
-        console.log('🔐 Webhook #4: Validating login, attempt', attemptCount);
+        console.log('ðŸ” Webhook #4: Validating login, attempt', attemptCount);
         
         const response = await fetch(WEBHOOK_CONFIG.LOGIN_VALIDATE, {
             method: 'POST',
@@ -1002,7 +1002,7 @@ function renderLoginView() {
                 </div>
                 
                 <div class="auth-back">
-                    <a href="#" onclick="showInitialView(); return false;">← Back</a>
+                    <a href="#" onclick="showInitialView(); return false;">&lt; Back</a>
                 </div>
             </div>
         </div>
@@ -1086,7 +1086,7 @@ function renderSignupStep1() {
                             Back
                         </button>
                         <button class="auth-btn primary" onclick="handleStep1Next()">
-                            Next →
+                            Next &gt;
                         </button>
                     </div>
                 </div>
@@ -1110,7 +1110,7 @@ function renderSignupStep2() {
                 </div>
                 
                 <div class="progress-bar">
-                    <div class="progress-step completed">✓</div>
+                    <div class="progress-step completed">OK</div>
                     <div class="progress-line completed"></div>
                     <div class="progress-step active">2</div>
                     <div class="progress-line"></div>
@@ -1178,9 +1178,9 @@ function renderSignupStep2() {
                         <div class="logo-upload-area" onclick="document.getElementById('logoUpload').click()">
                             ${signupData.companyLogo ? 
                                 `<img src="${signupData.companyLogo}" class="uploaded-logo" alt="Logo">
-                                 <button class="remove-logo" onclick="event.stopPropagation(); removeCompanyLogo()">×</button>` : 
+                                 <button class="remove-logo" onclick="event.stopPropagation(); removeCompanyLogo()">Ã—</button>` : 
                                 `<div class="upload-placeholder">
-                                    <span class="upload-icon">📷</span>
+                                    <span class="upload-icon">+</span>
                                     <span>Click to upload logo</span>
                                     <span class="upload-hint">PNG, JPG up to 5MB</span>
                                 </div>`
@@ -1192,10 +1192,10 @@ function renderSignupStep2() {
                     
                     <div class="auth-buttons">
                         <button class="auth-btn secondary" onclick="showSignupStep1()">
-                            ← Back
+                            &lt; Back
                         </button>
                         <button class="auth-btn primary" onclick="handleStep2Next()">
-                            Next →
+                            Next &gt;
                         </button>
                     </div>
                 </div>
@@ -1215,9 +1215,9 @@ function renderSignupStep3() {
                 </div>
                 
                 <div class="progress-bar">
-                    <div class="progress-step completed">✓</div>
+                    <div class="progress-step completed">OK</div>
                     <div class="progress-line completed"></div>
-                    <div class="progress-step completed">✓</div>
+                    <div class="progress-step completed">OK</div>
                     <div class="progress-line completed"></div>
                     <div class="progress-step active">3</div>
                 </div>
@@ -1226,7 +1226,7 @@ function renderSignupStep3() {
                     ${authState.errors.general ? `<div class="auth-error-banner">${authState.errors.general}</div>` : ''}
                     
                     <div class="bank-info-notice">
-                        <span class="info-icon">🔒</span>
+                        <span class="info-icon">*</span>
                         <p>Your bank details are stored securely and only used to display on your invoices for client payments.</p>
                     </div>
                     
@@ -1288,7 +1288,7 @@ function renderSignupStep3() {
                     
                     <div class="auth-buttons">
                         <button class="auth-btn secondary" onclick="showSignupStep2()">
-                            ← Back
+                            &lt; Back
                         </button>
                         <button class="auth-btn success" onclick="handleSignupSubmit()" ${authState.isLoading ? 'disabled' : ''}>
                             ${authState.isLoading ? '<span class="spinner"></span> Creating...' : 'Create Account'}
@@ -1355,7 +1355,7 @@ function renderVerifySignup() {
                 </div>
                 
                 <div class="auth-back">
-                    <a href="#" onclick="showSignupStep3(); return false;">← Back to Details</a>
+                    <a href="#" onclick="showSignupStep3(); return false;">&lt; Back to Details</a>
                 </div>
             </div>
         </div>
@@ -1421,7 +1421,7 @@ function renderVerifyLogin() {
                 </div>
                 
                 <div class="auth-back">
-                    <a href="#" onclick="showLoginView(); return false;">← Back to Login</a>
+                    <a href="#" onclick="showLoginView(); return false;">&lt; Back to Login</a>
                 </div>
             </div>
         </div>
@@ -1529,7 +1529,7 @@ function showAuthSuccess(message, callback) {
     authScreen.innerHTML = `
         <div class="auth-container">
             <div class="auth-card success-card">
-                <div class="success-icon">✓</div>
+                <div class="success-icon">OK</div>
                 <h2>${message}</h2>
                 <p>Redirecting to dashboard...</p>
             </div>
