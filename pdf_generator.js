@@ -526,9 +526,9 @@ async function downloadQuote() {
         if (error.message.includes('Failed to fetch') || error.message.includes('NetworkError')) {
             errorMessage += 'Network Error - Cannot connect to PDFShift API.\n\n';
             errorMessage += 'Please check:\n';
-            errorMessage += 'â€¢ Your internet connection\n';
-            errorMessage += 'â€¢ Firewall or browser extensions blocking the request\n';
-            errorMessage += 'â€¢ Try using a different browser\n\n';
+            errorMessage += '- Your internet connection\n';
+            errorMessage += '- Firewall or browser extensions blocking the request\n';
+            errorMessage += '- Try using a different browser\n\n';
             errorMessage += 'Technical details are in the console (press F12)';
         } else {
             errorMessage += error.message;
