@@ -7,16 +7,16 @@
 const WEBHOOK_CONFIG = {
     // Webhook #1: Account Creation - Stores details and sends OTP
     // Also used for Login OTP request and Resend Code
-    ACCOUNT_CREATE_OTP: 'YOUR_MAKE_COM_WEBHOOK_1_URL',
+    ACCOUNT_CREATE_OTP: 'https://hook.eu1.make.com/ohdm5yreraugif6kdck4bj7oo8y62g67',
     
     // Webhook #2: Account Creation - Validates OTP
-    ACCOUNT_VALIDATE_OTP: 'YOUR_MAKE_COM_WEBHOOK_2_URL',
+    ACCOUNT_VALIDATE_OTP: 'https://hook.eu1.make.com/8et2d1wlqf8avecki8x6q9uci9o3sqxf',
     
     // Webhook #3: Get User Details (after account creation)
-    GET_USER_DETAILS: 'YOUR_MAKE_COM_WEBHOOK_3_URL',
+    GET_USER_DETAILS: 'https://hook.eu1.make.com/fcanehdltyyrdxspj0y6ssavhkao8gdv',
     
     // Webhook #4: Login Validation - Validates OTP and returns user data
-    LOGIN_VALIDATE: 'YOUR_MAKE_COM_WEBHOOK_4_URL'
+    LOGIN_VALIDATE: 'https://hook.eu1.make.com/ck0c68qcw69edyx9a84ahfw74lfmjf6w'
 };
 
 // ============================================
