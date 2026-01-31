@@ -191,7 +191,7 @@ body {
 }
 
 .tool-features li::before {
-    content: 'âœ“';
+    content: '\2022';
     position: absolute;
     left: 0;
     color: #fbbf24;
