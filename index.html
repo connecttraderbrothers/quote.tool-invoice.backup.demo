@@ -2,287 +2,499 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>OMEGA - Professional Business Tools</title>
     <link rel="manifest" href="manifest.json">
-    <meta name="theme-color" content="#1a1a1a">
-    <link rel="icon" type="image/png" sizes="512x512" href="https://github.com/connecttraderbrothers/omega.app.icon/blob/main/icon-512x512.png?raw=true">
-    <link rel="apple-touch-icon" href="https://github.com/connecttraderbrothers/omega.app.icon/blob/main/icon-512x512.png?raw=true">
-    <link rel="stylesheet" href="splash.css">
+    <meta name="theme-color" content="#1a237e">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <link rel="icon" type="image/png" href="omega-logo.png">
+    <link rel="apple-touch-icon" href="omega-logo.png">
+    
+    <!-- Stylesheets -->
+    <link rel="stylesheet" href="app.css">
     <link rel="stylesheet" href="auth.css">
-    <link rel="stylesheet" href="dashboard.css">
-    <link rel="stylesheet" href="user-menu.css">
     <link rel="stylesheet" href="styles.css">
+    
+    <style>
+        /* Splash Screen */
+        .splash-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(135deg, #1a237e 0%, #0d1642 100%);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+            transition: opacity 0.5s, visibility 0.5s;
+        }
+        
+        .splash-screen.hidden {
+            opacity: 0;
+            visibility: hidden;
+        }
+        
+        .splash-logo {
+            width: 120px;
+            height: 120px;
+            margin-bottom: 20px;
+            animation: pulse 2s ease-in-out infinite;
+        }
+        
+        .splash-title {
+            font-size: 32px;
+            font-weight: bold;
+            color: #d4af37;
+            margin-bottom: 10px;
+        }
+        
+        .splash-subtitle {
+            font-size: 14px;
+            color: rgba(255,255,255,0.7);
+            margin-bottom: 30px;
+        }
+        
+        .splash-loader {
+            width: 200px;
+            height: 4px;
+            background: rgba(255,255,255,0.2);
+            border-radius: 2px;
+            overflow: hidden;
+        }
+        
+        .splash-loader-bar {
+            height: 100%;
+            background: linear-gradient(90deg, #d4af37, #e6c866);
+            width: 0%;
+            animation: loading 2s ease-out forwards;
+        }
+        
+        @keyframes loading {
+            0% { width: 0%; }
+            100% { width: 100%; }
+        }
+        
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+    </style>
 </head>
 <body>
-    <!-- MATRIX BACKGROUND CANVAS -->
-    <canvas id="matrix"></canvas>
-
     <!-- SPLASH SCREEN -->
-    <div id="splashScreen" class="splash-container">
-        <div class="logo-wrapper">
-            <img src="https://github.com/connecttraderbrothers/omega.app.icon/blob/main/icon-512x512.png?raw=true" alt="Omega Logo" class="splash-logo">
+    <div id="splashScreen" class="splash-screen">
+        <img src="omega-logo.png" alt="OMEGA" class="splash-logo">
+        <div class="splash-title">OMEGA</div>
+        <div class="splash-subtitle">Professional Business Tools</div>
+        <div class="splash-loader">
+            <div class="splash-loader-bar"></div>
         </div>
-        <div class="company-name">OMEGA</div>
-        <div class="tagline">Professional Business Tools</div>
-        <div class="loading-bar">
-            <div class="loading-progress"></div>
-        </div>
-        <button class="enter-button" onclick="enterMatrix()">Enter The Matrix</button>
     </div>
 
     <!-- AUTHENTICATION SCREEN -->
     <div id="authScreen" style="display: none;">
-        <!-- Auth content will be rendered by auth.js -->
+        <!-- Auth content rendered by auth.js -->
     </div>
 
-    <!-- DASHBOARD SCREEN -->
-    <div id="dashboardScreen" style="display: none;">
-        <div class="dashboard-header">
-            <img src="https://github.com/connecttraderbrothers/omega.app.icon/blob/main/icon-512x512.png?raw=true" alt="Logo" class="header-logo">
-            <div class="header-content">
-                <div class="header-title">OMEGA</div>
-                <div class="header-subtitle">Professional Business Tools</div>
+    <!-- MAIN APP -->
+    <div id="mainApp" style="display: none;">
+        
+        <!-- TOP HEADER -->
+        <header class="app-header">
+            <div class="header-left">
+                <img src="omega-logo.png" alt="OMEGA" class="header-logo">
+                <span class="header-title">OMEGA</span>
             </div>
-        </div>
-
-        <div class="dashboard-container">
-            <div class="welcome-section">
-                <div class="welcome-title">Welcome Back</div>
-                <div class="welcome-text">Select a tool to get started</div>
+            <div class="header-right">
+                <button class="header-icon-btn" onclick="showSearch()">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="11" cy="11" r="8"></circle>
+                        <path d="m21 21-4.35-4.35"></path>
+                    </svg>
+                </button>
+                <button class="header-icon-btn settings-badge" onclick="showSettings()">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="3"></circle>
+                        <path d="M12 1v6m0 6v6m11-7h-6m-6 0H1m16.5-5.5l-4.24 4.24m-4.24 4.24L4.5 17.5m13-11L13.26 10.76M6.5 17.5l4.24-4.24"></path>
+                    </svg>
+                </button>
             </div>
+        </header>
 
-            <h2 class="section-title">Available Tools</h2>
-
-            <div class="tools-grid">
-                <div class="tool-card active" onclick="showQuotationTool()">
-                    <div class="tool-icon">📋</div>
-                    <div class="tool-title">Quotation Tool</div>
-                    <div class="tool-description">
-                        Create professional estimates and quotations for your clients with automated calculations and PDF generation.
-                    </div>
-                    <span class="tool-status status-active">Active</span>
-                    <ul class="tool-features">
-                        <li>Auto-generate customer IDs</li>
-                        <li>Standard trade rates included</li>
-                        <li>Professional PDF output</li>
-                        <li>VAT calculation</li>
-                    </ul>
-                </div>
-
-                <div class="tool-card active" onclick="showInvoiceTool()">
-                    <div class="tool-icon">📊</div>
-                    <div class="tool-title">Invoice Manager</div>
-                    <div class="tool-description">
-                        Manage invoices, track payments, and maintain client records all in one place.
-                    </div>
-                    <span class="tool-status status-active">Active</span>
-                    <ul class="tool-features">
-                        <li>Invoice generation</li>
-                        <li>Payment tracking</li>
-                        <li>Client database</li>
-                        <li>Financial reports</li>
-                    </ul>
-                </div>
-
-                <div class="tool-card disabled">
-                    <div class="tool-icon">📅</div>
-                    <div class="tool-title">Job Scheduler</div>
-                    <div class="tool-description">
-                        Schedule jobs, manage your team, and track project timelines efficiently.
-                    </div>
-                    <span class="tool-status status-coming-soon">Coming Soon</span>
-                    <ul class="tool-features">
-                        <li>📅 integration</li>
-                        <li>Team assignments</li>
-                        <li>Progress tracking</li>
-                        <li>Deadline reminders</li>
-                    </ul>
-                </div>
-
-                <div class="tool-card disabled">
-                    <div class="tool-icon">💰</div>
-                    <div class="tool-title">Expense Tracker</div>
-                    <div class="tool-description">
-                        Track business expenses, receipts, and generate financial reports for tax purposes.
-                    </div>
-                    <span class="tool-status status-coming-soon">Coming Soon</span>
-                    <ul class="tool-features">
-                        <li>Receipt scanning</li>
-                        <li>Category management</li>
-                        <li>Monthly reports</li>
-                        <li>Tax calculations</li>
-                    </ul>
-                </div>
-
-                <div class="tool-card disabled">
-                    <div class="tool-icon">📦</div>
-                    <div class="tool-title">Inventory Manager</div>
-                    <div class="tool-description">
-                        Keep track of materials, tools, and supplies with automated stock alerts.
-                    </div>
-                    <span class="tool-status status-coming-soon">Coming Soon</span>
-                    <ul class="tool-features">
-                        <li>Stock tracking</li>
-                        <li>Low stock alerts</li>
-                        <li>Supplier management</li>
-                        <li>Order history</li>
-                    </ul>
-                </div>
-
-                <div class="tool-card disabled">
-                    <div class="tool-icon">👥</div>
-                    <div class="tool-title">Client Portal</div>
-                    <div class="tool-description">
-                        Give clients access to their quotes, invoices, and project updates in real-time.
-                    </div>
-                    <span class="tool-status status-coming-soon">Coming Soon</span>
-                    <ul class="tool-features">
-                        <li>Client dashboard</li>
-                        <li>Document access</li>
-                        <li>Message center</li>
-                        <li>Payment portal</li>
-                    </ul>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- QUOTATION TOOL SCREEN -->
-    <div id="quotationScreen" style="display: none;">
-        <div class="back-navigation">
-            <button class="back-btn" onclick="showDashboard()">
-                Back to Dashboard
-            </button>
-        </div>
-
-        <div class="container">
-            <div class="header">
-                <div class="logo-container">
-                    <img src="https://github.com/connecttraderbrothers/omega.app.icon/blob/main/icon-512x512.png?raw=true" alt="Omega Logo" class="logo">
-                </div>
-                <div class="header-text">
-                    <h1>OMEGA</h1>
-                    <p>Professional Quotation Tool</p>
-                </div>
-            </div>
+        <!-- MAIN CONTENT AREA -->
+        <main class="main-content">
             
-            <div class="estimate-counter">
-                Next Estimate Number: <span id="estimateCounter">#0001</span>
-            </div>
-
-            <div class="section">
-                <h2 class="section-title">Client Information</h2>
-                <div class="form-grid">
-                    <div class="form-group">
-                        <label>Client Name *</label>
-                        <input type="text" id="clientName" placeholder="Enter full name (e.g., John Smith)">
-                    </div>
-                    <div class="form-group">
-                        <label>Client Phone</label>
-                        <input type="text" id="clientPhone" placeholder="Enter phone number">
-                    </div>
-                    <div class="form-group">
-                        <label>Client Email</label>
-                        <input type="email" id="clientEmail" placeholder="Enter email address">
-                    </div>
-                    <div class="form-group">
-                        <label>Project Address *</label>
-                        <input type="text" id="projectAddress" placeholder="Enter full address">
-                    </div>
-                   <div class="form-group">
-                        <label>Project Postcode</label>
-                        <input type="text" id="projectPostcode" placeholder="Enter postcode">
-                    </div>
-                    <div class="form-group">
-                        <label>Customer ID (Auto-generated)</label>
-                        <input type="text" id="customerId" placeholder="Auto-generated from name" disabled>
-                    </div>
+            <!-- INVOICES SCREEN -->
+            <div id="invoicesScreen" class="screen active">
+                <div class="tab-nav">
+                    <button class="tab-item active" data-tab="all">All</button>
+                    <button class="tab-item" data-tab="outstanding">Outstanding</button>
+                    <button class="tab-item" data-tab="paid">Paid</button>
                 </div>
-            </div>
-
-            <div class="section">
-                <h2 class="section-title">Add Line Item</h2>
                 
-                <div class="form-grid">
-                    <div class="form-group">
-                        <label>Trade Category</label>
-                        <select id="tradeCategory">
-                            <option value="">Select a trade...</option>
-                            <option value="Downtakings">Downtakings</option>
-                            <option value="General Building">General Building</option>
-                            <option value="Building work">Building work</option>
-                            <option value="Carpentry">Carpentry</option>
-                            <option value="Joinery">Joinery</option>
-                            <option value="Electrical">Electricals</option>
-                            <option value="Plumbing">Plumbing</option>
-                            <option value="Gas work/Plumbing">Gas work/Plumbing</option>
-                            <option value="Plastering">Plastering</option>
-                            <option value="Skimming /Painting">Skimming /Painting</option>
-                            <option value="Painting & Decorating">Painting & Decorating</option>
-                            <option value="Tiling">Tiling</option>
-                            <option value="Roofing">Roofing</option>
-                            <option value="Kitchen Fitting">Kitchen Fitting</option>
-                            <option value="Bathroom Fitting">Bathrooms</option>
-                            <option value="Flooring">Flooring</option>
-                            <option value="Bricklaying">Bricklaying</option>
-                            <option value="HVAC">HVAC (Heating & Ventilation)</option>
-                            <option value="Groundworks">Groundworks</option>
-                            <option value="Scaffolding">Scaffolding</option>
-                            <option value="Glazing">Glazing</option>
-                            <option value="Insulation">Insulation</option>
-                            <option value="Materials">Materials</option>
-                        </select>
-                        <div id="tradeRateInfo" class="rate-info"></div>
+                <div class="promo-banner" onclick="showPromo()">
+                    <div class="promo-icon">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <circle cx="12" cy="12" r="10"></circle>
+                            <polyline points="12 6 12 12 16 14"></polyline>
+                        </svg>
                     </div>
-                    <div class="form-group">
-                        <label>Description *</label>
-                        <input type="text" id="description" placeholder="Describe the work">
+                    <div class="promo-content">
+                        <div class="promo-title">Welcome to OMEGA Pro</div>
+                        <div class="promo-subtitle">Tap to explore key features</div>
+                    </div>
+                    <span class="promo-arrow">></span>
+                </div>
+                
+                <div class="empty-state" id="invoicesEmpty">
+                    <div class="empty-icon">
+                        <svg width="50" height="50" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6zm-1 7V3.5L18.5 9H13z"/>
+                        </svg>
+                    </div>
+                    <div class="empty-title">Your invoices will show up here. Click the plus button below to create your first invoice!</div>
+                    <div class="empty-subtitle">And, don't forget to offer your customers<br><a href="#">flexible ways to pay.</a></div>
+                </div>
+                
+                <div class="list-container" id="invoicesList" style="display: none;">
+                    <!-- Invoice items will be rendered here -->
+                </div>
+            </div>
+
+            <!-- ESTIMATES SCREEN -->
+            <div id="estimatesScreen" class="screen">
+                <div class="tab-nav">
+                    <button class="tab-item active" data-tab="all">All</button>
+                    <button class="tab-item" data-tab="pending">Pending</button>
+                    <button class="tab-item" data-tab="accepted">Accepted</button>
+                </div>
+                
+                <div class="empty-state" id="estimatesEmpty">
+                    <div class="empty-icon">
+                        <svg width="50" height="50" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-5 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z"/>
+                        </svg>
+                    </div>
+                    <div class="empty-title">Your estimates will show up here. Click the plus button below to create your first estimate!</div>
+                    <div class="empty-subtitle">Professional quotes help win more jobs.</div>
+                </div>
+                
+                <div class="list-container" id="estimatesList" style="display: none;">
+                    <!-- Estimate items will be rendered here -->
+                </div>
+            </div>
+
+            <!-- EXPENSES SCREEN (Coming Soon) -->
+            <div id="expensesScreen" class="screen">
+                <div class="empty-state">
+                    <div class="empty-icon">
+                        <svg width="50" height="50" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M11.8 10.9c-2.27-.59-3-1.2-3-2.15 0-1.09 1.01-1.85 2.7-1.85 1.78 0 2.44.85 2.5 2.1h2.21c-.07-1.72-1.12-3.3-3.21-3.81V3h-3v2.16c-1.94.42-3.5 1.68-3.5 3.61 0 2.31 1.91 3.46 4.7 4.13 2.5.6 3 1.48 3 2.41 0 .69-.49 1.79-2.7 1.79-2.06 0-2.87-.92-2.98-2.1h-2.2c.12 2.19 1.76 3.42 3.68 3.83V21h3v-2.15c1.95-.37 3.5-1.5 3.5-3.55 0-2.84-2.43-3.81-4.7-4.4z"/>
+                        </svg>
+                    </div>
+                    <div class="empty-title">Expense tracking coming soon!</div>
+                    <div class="empty-subtitle">Track receipts and manage business expenses.</div>
+                </div>
+            </div>
+
+            <!-- PAYMENTS SCREEN (Coming Soon) -->
+            <div id="paymentsScreen" class="screen">
+                <div class="empty-state">
+                    <div class="empty-icon">
+                        <svg width="50" height="50" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M20 4H4c-1.11 0-1.99.89-1.99 2L2 18c0 1.11.89 2 2 2h16c1.11 0 2-.89 2-2V6c0-1.11-.89-2-2-2zm0 14H4v-6h16v6zm0-10H4V6h16v2z"/>
+                        </svg>
+                    </div>
+                    <div class="empty-title">Payment tracking coming soon!</div>
+                    <div class="empty-subtitle">Accept and track payments from customers.</div>
+                </div>
+            </div>
+
+            <!-- MORE/SETTINGS SCREEN -->
+            <div id="moreScreen" class="screen">
+                <div class="settings-section">
+                    <div class="settings-group">
+                        <div class="settings-group-title">Account</div>
+                        <div class="settings-item" onclick="showProfile()">
+                            <div class="settings-item-icon">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                                    <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
+                                </svg>
+                            </div>
+                            <div class="settings-item-content">
+                                <div class="settings-item-title">My Profile</div>
+                                <div class="settings-item-subtitle">Edit your business details</div>
+                            </div>
+                            <span class="settings-item-arrow">></span>
+                        </div>
+                        <div class="settings-item" onclick="showBankDetails()">
+                            <div class="settings-item-icon">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                                    <path d="M4 10h3v7H4zm6 0h3v7h-3zm11-4L12 1 3 6v2h18V6zm-8 12h3v-7h-3v7zm6 0h3v-7h-3v7zM3 22h18v-2H3v2z"/>
+                                </svg>
+                            </div>
+                            <div class="settings-item-content">
+                                <div class="settings-item-title">Bank Details</div>
+                                <div class="settings-item-subtitle">Payment information for invoices</div>
+                            </div>
+                            <span class="settings-item-arrow">></span>
+                        </div>
+                    </div>
+                    
+                    <div class="settings-group">
+                        <div class="settings-group-title">Preferences</div>
+                        <div class="settings-item">
+                            <div class="settings-item-icon">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                                    <path d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.9 2 2 2zm6-6v-5c0-3.07-1.63-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.64 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2zm-2 1H8v-6c0-2.48 1.51-4.5 4-4.5s4 2.02 4 4.5v6z"/>
+                                </svg>
+                            </div>
+                            <div class="settings-item-content">
+                                <div class="settings-item-title">Notifications</div>
+                                <div class="settings-item-subtitle">Manage alert preferences</div>
+                            </div>
+                            <span class="settings-item-arrow">></span>
+                        </div>
+                        <div class="settings-item">
+                            <div class="settings-item-icon">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                                    <path d="M12.65 10C11.83 7.67 9.61 6 7 6c-3.31 0-6 2.69-6 6s2.69 6 6 6c2.61 0 4.83-1.67 5.65-4H17v4h4v-4h2v-4H12.65zM7 14c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2z"/>
+                                </svg>
+                            </div>
+                            <div class="settings-item-content">
+                                <div class="settings-item-title">Security</div>
+                                <div class="settings-item-subtitle">Password and login settings</div>
+                            </div>
+                            <span class="settings-item-arrow">></span>
+                        </div>
+                    </div>
+                    
+                    <div class="settings-group">
+                        <div class="settings-group-title">Support</div>
+                        <div class="settings-item">
+                            <div class="settings-item-icon">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                                    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 17h-2v-2h2v2zm2.07-7.75l-.9.92C13.45 12.9 13 13.5 13 15h-2v-.5c0-1.1.45-2.1 1.17-2.83l1.24-1.26c.37-.36.59-.86.59-1.41 0-1.1-.9-2-2-2s-2 .9-2 2H8c0-2.21 1.79-4 4-4s4 1.79 4 4c0 .88-.36 1.68-.93 2.25z"/>
+                                </svg>
+                            </div>
+                            <div class="settings-item-content">
+                                <div class="settings-item-title">Help & Support</div>
+                                <div class="settings-item-subtitle">FAQs and contact us</div>
+                            </div>
+                            <span class="settings-item-arrow">></span>
+                        </div>
+                    </div>
+                    
+                    <div class="settings-group">
+                        <div class="settings-item danger" onclick="handleLogout()">
+                            <div class="settings-item-icon">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                                    <path d="M17 7l-1.41 1.41L18.17 11H8v2h10.17l-2.58 2.58L17 17l5-5zM4 5h8V3H4c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h8v-2H4V5z"/>
+                                </svg>
+                            </div>
+                            <div class="settings-item-content">
+                                <div class="settings-item-title">Log Out</div>
+                            </div>
+                        </div>
                     </div>
                 </div>
+            </div>
+        </main>
 
+        <!-- FLOATING ACTION BUTTON -->
+        <button class="fab-create" onclick="toggleCreateMenu()">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
+                <line x1="12" y1="5" x2="12" y2="19"></line>
+                <line x1="5" y1="12" x2="19" y2="12"></line>
+            </svg>
+        </button>
+
+        <!-- BOTTOM NAVIGATION -->
+        <nav class="bottom-nav">
+            <button class="nav-item active" data-screen="invoices" onclick="switchScreen('invoices')">
+                <span class="nav-icon">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6zm-1 7V3.5L18.5 9H13zM9 13h6v2H9v-2zm0 4h6v2H9v-2z"/>
+                    </svg>
+                </span>
+                <span class="nav-label">Invoices</span>
+            </button>
+            <button class="nav-item" data-screen="estimates" onclick="switchScreen('estimates')">
+                <span class="nav-icon">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-5 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z"/>
+                    </svg>
+                </span>
+                <span class="nav-label">Estimates</span>
+            </button>
+            <button class="nav-item" data-screen="expenses" onclick="switchScreen('expenses')">
+                <span class="nav-icon">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-4 10h-2v2c0 .55-.45 1-1 1s-1-.45-1-1v-2H9c-.55 0-1-.45-1-1s.45-1 1-1h2V9c0-.55.45-1 1-1s1 .45 1 1v2h2c.55 0 1 .45 1 1s-.45 1-1 1z"/>
+                    </svg>
+                </span>
+                <span class="nav-label">Expenses</span>
+            </button>
+            <button class="nav-item" data-screen="payments" onclick="switchScreen('payments')">
+                <span class="nav-icon">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M20 4H4c-1.11 0-1.99.89-1.99 2L2 18c0 1.11.89 2 2 2h16c1.11 0 2-.89 2-2V6c0-1.11-.89-2-2-2zm0 14H4v-6h16v6zm0-10H4V6h16v2z"/>
+                    </svg>
+                </span>
+                <span class="nav-label">Payments</span>
+            </button>
+            <button class="nav-item" data-screen="more" onclick="switchScreen('more')">
+                <span class="nav-icon">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M6 10c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm12 0c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm-6 0c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z"/>
+                    </svg>
+                </span>
+                <span class="nav-label">More</span>
+            </button>
+        </nav>
+
+        <!-- CREATE MENU OVERLAY -->
+        <div class="create-menu-overlay" id="createMenuOverlay" onclick="toggleCreateMenu()">
+            <div class="create-menu" onclick="event.stopPropagation()">
+                <button class="create-menu-close" onclick="toggleCreateMenu()">x</button>
+                <div class="create-menu-header">
+                    <div class="create-menu-title">Create New</div>
+                </div>
+                <div class="create-menu-options">
+                    <button class="create-option" onclick="createNewInvoice()">
+                        <div class="create-option-icon invoice">
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+                                <path d="M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6zm-1 7V3.5L18.5 9H13z"/>
+                            </svg>
+                        </div>
+                        <div class="create-option-text">
+                            <div class="create-option-title">New Invoice</div>
+                            <div class="create-option-subtitle">Bill your customers</div>
+                        </div>
+                    </button>
+                    <button class="create-option" onclick="createNewEstimate()">
+                        <div class="create-option-icon estimate">
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+                                <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-5 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z"/>
+                            </svg>
+                        </div>
+                        <div class="create-option-text">
+                            <div class="create-option-title">New Estimate</div>
+                            <div class="create-option-subtitle">Quote for potential jobs</div>
+                        </div>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- QUOTATION TOOL SCREEN (Full Page) -->
+    <div id="quotationScreen" style="display: none;">
+        <header class="tool-header">
+            <button class="tool-back-btn" onclick="backToMain()">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M19 12H5M12 19l-7-7 7-7"/>
+                </svg>
+            </button>
+            <span class="tool-title">New Estimate</span>
+        </header>
+        
+        <div class="tool-content">
+            <div class="form-section">
+                <div class="form-section-title">Customer Information</div>
+                <div class="form-group">
+                    <label>Client Name *</label>
+                    <input type="text" id="clientName" placeholder="Enter client name">
+                </div>
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label>Phone</label>
+                        <input type="tel" id="clientPhone" placeholder="Phone number">
+                    </div>
+                    <div class="form-group">
+                        <label>Email</label>
+                        <input type="email" id="clientEmail" placeholder="Email address">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Project Address *</label>
+                    <input type="text" id="projectAddress" placeholder="Project location">
+                </div>
+                <div class="form-group">
+                    <label>Postcode</label>
+                    <input type="text" id="projectPostcode" placeholder="Postcode">
+                </div>
+                <div class="form-group">
+                    <label>Customer ID</label>
+                    <input type="text" id="customerId" placeholder="Auto-generated" readonly>
+                </div>
+            </div>
+
+            <div class="form-section">
+                <div class="form-section-title">Add Line Item</div>
+                <div class="form-group">
+                    <label>Trade Category</label>
+                    <select id="tradeCategory">
+                        <option value="">Select category...</option>
+                        <option value="Downtakings">Downtakings</option>
+                        <option value="General Building">General Building</option>
+                        <option value="Building work">Building Work</option>
+                        <option value="Carpentry">Carpentry</option>
+                        <option value="Joinery">Joinery</option>
+                        <option value="Electrical">Electrical</option>
+                        <option value="Plumbing">Plumbing</option>
+                        <option value="Gas work/Plumbing">Gas Work/Plumbing</option>
+                        <option value="Plastering">Plastering</option>
+                        <option value="Skimming /Painting">Skimming/Painting</option>
+                        <option value="Painting & Decorating">Painting & Decorating</option>
+                        <option value="Tiling">Tiling</option>
+                        <option value="Roofing">Roofing</option>
+                        <option value="Kitchen Fitting">Kitchen Fitting</option>
+                        <option value="Bathroom Fitting">Bathroom Fitting</option>
+                        <option value="Flooring">Flooring</option>
+                        <option value="Bricklaying">Bricklaying</option>
+                        <option value="HVAC">HVAC (Heating & Ventilation)</option>
+                        <option value="Groundworks">Groundworks</option>
+                        <option value="Scaffolding">Scaffolding</option>
+                        <option value="Glazing">Glazing</option>
+                        <option value="Insulation">Insulation</option>
+                        <option value="Materials">Materials</option>
+                    </select>
+                    <div id="tradeRateInfo" class="rate-info"></div>
+                </div>
+                <div class="form-group">
+                    <label>Description *</label>
+                    <input type="text" id="description" placeholder="Describe the work">
+                </div>
                 <div class="form-grid">
                     <div class="form-group">
                         <label>Quantity *</label>
                         <input type="number" id="quantity" value="1" min="0.1" step="0.1">
                     </div>
                     <div class="form-group">
-                        <label>Rate Type</label>
-                        <div class="rate-type-selector">
-                            <button type="button" class="rate-type-btn" data-type="hourly">Hourly Rate</button>
-                            <button type="button" class="rate-type-btn" data-type="daily">Day Rate</button>
-                            <button type="button" class="rate-type-btn active" data-type="job">Per Job</button>
-                            <button type="button" class="rate-type-btn" data-type="custom">Custom</button>
-                        </div>
+                        <label id="rateLabel">Unit Price (GBP) *</label>
+                        <input type="number" id="unitPrice" placeholder="0.00" step="0.01" min="0">
                     </div>
                 </div>
-
-                <div class="form-grid">
-                    <div class="form-group">
-                        <label id="rateLabel">Unit Price (£) *</label>
-                        <input type="number" id="unitPrice" placeholder="Enter price or use standard rate" step="0.01" min="0">
-                    </div>
-                    <div class="form-group hidden" id="customUnitGroup">
-                        <label>Custom Unit Name</label>
-                        <input type="text" id="customUnit" placeholder="e.g., per sqm, per item">
-                    </div>
-                </div>
-
-                <button class="btn btn-primary" onclick="addItem()">Add Item to Quote</button>
+                <button class="btn-primary" onclick="addItem()">Add Item</button>
             </div>
 
-            <div class="section" id="quoteSection" style="display: none;">
-                <h2 class="section-title">Quote Items</h2>
+            <div class="form-section" id="quoteSection" style="display: none;">
+                <div class="form-section-title">Quote Items</div>
                 <div style="overflow-x: auto;">
-                    <table>
+                    <table class="items-table">
                         <thead>
                             <tr>
                                 <th>Category</th>
                                 <th>Description</th>
-                                <th class="text-center">Qty</th>
-                                <th class="text-right">Unit Price</th>
-                                <th class="text-right">Total</th>
-                                <th class="text-center">Action</th>
+                                <th>Qty</th>
+                                <th>Price</th>
+                                <th>Total</th>
+                                <th>Action</th>
                             </tr>
                         </thead>
                         <tbody id="quoteItems"></tbody>
@@ -290,100 +502,77 @@
                 </div>
             </div>
 
-            <div class="section" id="notesSection">
-                <h2 class="section-title">Additional Notes (Optional)</h2>
+            <div class="form-section" id="generateSection" style="display: none;">
                 <div class="form-group">
-                    <label>Custom Notes</label>
-                    <textarea id="customNotes" rows="4" placeholder="Add any additional notes or terms..."></textarea>
-                </div>
-                <div class="form-group">
-                    <label>Deposit Percentage</label>
+                    <label>Deposit (%)</label>
                     <input type="number" id="depositPercent" value="30" min="0" max="100">
                 </div>
-            </div>
-
-            <div id="generateSection" style="display: none; margin-top: 20px; text-align: center;">
-                <button class="btn btn-success" onclick="previewQuote()">Preview Quote</button>
-                <button class="btn btn-secondary" onclick="downloadQuote()">Download PDF</button>
+                <div class="form-group">
+                    <label>Additional Notes</label>
+                    <textarea id="customNotes" rows="3" placeholder="Any additional notes..."></textarea>
+                </div>
+                <button class="btn-accent" onclick="previewQuote()">Preview Quote</button>
+                <button class="btn-primary" onclick="downloadQuote()" style="margin-top: 10px;">Download PDF</button>
             </div>
         </div>
 
+        <!-- Quote Preview Modal -->
         <div id="previewModal" class="modal">
             <div class="modal-content">
                 <div class="modal-header">
-                    <span class="close" onclick="closePreview()">&times;</span>
+                    <span class="close" onclick="closePreview()">x</span>
                     <h2>Quote Preview</h2>
                 </div>
-                <div class="modal-body" id="previewBody">
-                </div>
+                <div class="modal-body" id="previewBody"></div>
                 <div class="modal-footer">
-                    <button class="btn btn-success" onclick="downloadQuote()">Download PDF</button>
-                    <button class="btn btn-secondary" onclick="closePreview()">Close</button>
+                    <button class="btn-primary" onclick="downloadQuote()">Download PDF</button>
+                    <button class="btn-secondary" onclick="closePreview()">Close</button>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- INVOICE TOOL SCREEN -->
-    <div id="invoiceScreen" style="display: none;">
-        <div class="back-navigation">
-            <button class="back-btn" onclick="showDashboard()">
-                Back to Dashboard
+    <!-- INVOICE TOOL SCREEN (Full Page) -->
+    <div id="invoiceToolScreen" style="display: none;">
+        <header class="tool-header">
+            <button class="tool-back-btn" onclick="backToMain()">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M19 12H5M12 19l-7-7 7-7"/>
+                </svg>
             </button>
-        </div>
-
-        <div class="container">
-            <div class="header">
-                <div class="logo-container">
-                    <img src="https://github.com/connecttraderbrothers/omega.app.icon/blob/main/icon-512x512.png?raw=true" alt="Omega Logo" class="logo">
+            <span class="tool-title">New Invoice</span>
+        </header>
+        
+        <div class="tool-content">
+            <div class="form-section">
+                <div class="form-section-title">Customer Information</div>
+                <div class="form-group">
+                    <label>Client Name *</label>
+                    <input type="text" id="invoiceClientName" placeholder="Enter client name">
                 </div>
-                <div class="header-text">
-                    <h1>OMEGA</h1>
-                    <p>Professional Invoice Tool</p>
-                </div>
-            </div>
-            
-            <div class="estimate-counter">
-                Next Invoice Number: <span id="invoiceCounter">#0001</span>
-            </div>
-
-            <div class="section">
-                <h2 class="section-title">Client Information</h2>
                 <div class="form-grid">
                     <div class="form-group">
-                        <label>Client Name *</label>
-                        <input type="text" id="invoiceClientName" placeholder="Enter full name (e.g., John Smith)">
+                        <label>Phone</label>
+                        <input type="tel" id="invoiceClientPhone" placeholder="Phone number">
                     </div>
                     <div class="form-group">
-                        <label>Client Phone</label>
-                        <input type="text" id="invoiceClientPhone" placeholder="Enter phone number">
+                        <label>Email</label>
+                        <input type="email" id="invoiceClientEmail" placeholder="Email address">
                     </div>
-                    <div class="form-group">
-                        <label>Client Email</label>
-                        <input type="email" id="invoiceClientEmail" placeholder="Enter email address">
-                    </div>
-                    <div class="form-group">
-                        <label>Project Address *</label>
-                        <input type="text" id="invoiceProjectAddress" placeholder="Enter full address">
-                    </div>
-                   <div class="form-group">
-                        <label>Project Postcode</label>
-                        <input type="text" id="invoiceProjectPostcode" placeholder="Enter postcode">
-                    </div>
-                    <div class="form-group">
-                        <label>Customer ID (Auto-generated)</label>
-                        <input type="text" id="invoiceCustomerId" placeholder="Auto-generated from name" disabled>
-                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Project Address *</label>
+                    <input type="text" id="invoiceProjectAddress" placeholder="Project location">
+                </div>
+                <div class="form-group">
+                    <label>Customer ID</label>
+                    <input type="text" id="invoiceCustomerId" placeholder="Auto-generated" readonly>
                 </div>
             </div>
 
-            <div class="section">
-                <h2 class="section-title">Payment Terms</h2>
+            <div class="form-section">
+                <div class="form-section-title">Payment Terms</div>
                 <div class="form-grid">
-                    <div class="form-group">
-                        <label>Payment Due (Days)</label>
-                        <input type="number" id="paymentDueDays" value="30" min="0" max="365">
-                    </div>
                     <div class="form-group">
                         <label>Payment Status</label>
                         <select id="paymentStatus">
@@ -392,91 +581,74 @@
                             <option value="paid">Paid</option>
                         </select>
                     </div>
+                    <div class="form-group">
+                        <label>Due Date</label>
+                        <input type="date" id="invoiceDueDate">
+                    </div>
                 </div>
             </div>
 
-            <div class="section">
-                <h2 class="section-title">Add Line Item</h2>
-                
-                <div class="form-grid">
-                    <div class="form-group">
-                        <label>Trade Category</label>
-                        <select id="invoiceTradeCategory">
-                            <option value="">Select a trade...</option>
-                            <option value="Downtakings">Downtakings</option>
-                            <option value="General Building">General Building</option>
-                            <option value="Building work">Building work</option>
-                            <option value="Carpentry">Carpentry</option>
-                            <option value="Joinery">Joinery</option>
-                            <option value="Electrical">Electricals</option>
-                            <option value="Plumbing">Plumbing</option>
-                            <option value="Gas work/Plumbing">Gas work/Plumbing</option>
-                            <option value="Plastering">Plastering</option>
-                            <option value="Skimming /Painting">Skimming /Painting</option>
-                            <option value="Painting & Decorating">Painting & Decorating</option>
-                            <option value="Tiling">Tiling</option>
-                            <option value="Roofing">Roofing</option>
-                            <option value="Kitchen Fitting">Kitchen Fitting</option>
-                            <option value="Bathroom Fitting">Bathrooms</option>
-                            <option value="Flooring">Flooring</option>
-                            <option value="Bricklaying">Bricklaying</option>
-                            <option value="HVAC">HVAC (Heating & Ventilation)</option>
-                            <option value="Groundworks">Groundworks</option>
-                            <option value="Scaffolding">Scaffolding</option>
-                            <option value="Glazing">Glazing</option>
-                            <option value="Insulation">Insulation</option>
-                            <option value="Materials">Materials</option>
-                        </select>
-                        <div id="invoiceTradeRateInfo" class="rate-info"></div>
-                    </div>
-                    <div class="form-group">
-                        <label>Description *</label>
-                        <input type="text" id="invoiceDescription" placeholder="Describe the work">
-                    </div>
+            <div class="form-section">
+                <div class="form-section-title">Add Line Item</div>
+                <div class="form-group">
+                    <label>Trade Category</label>
+                    <select id="invoiceTradeCategory">
+                        <option value="">Select category...</option>
+                        <option value="Downtakings">Downtakings</option>
+                        <option value="General Building">General Building</option>
+                        <option value="Building work">Building Work</option>
+                        <option value="Carpentry">Carpentry</option>
+                        <option value="Joinery">Joinery</option>
+                        <option value="Electrical">Electrical</option>
+                        <option value="Plumbing">Plumbing</option>
+                        <option value="Gas work/Plumbing">Gas Work/Plumbing</option>
+                        <option value="Plastering">Plastering</option>
+                        <option value="Skimming /Painting">Skimming/Painting</option>
+                        <option value="Painting & Decorating">Painting & Decorating</option>
+                        <option value="Tiling">Tiling</option>
+                        <option value="Roofing">Roofing</option>
+                        <option value="Kitchen Fitting">Kitchen Fitting</option>
+                        <option value="Bathroom Fitting">Bathroom Fitting</option>
+                        <option value="Flooring">Flooring</option>
+                        <option value="Bricklaying">Bricklaying</option>
+                        <option value="HVAC">HVAC (Heating & Ventilation)</option>
+                        <option value="Groundworks">Groundworks</option>
+                        <option value="Scaffolding">Scaffolding</option>
+                        <option value="Glazing">Glazing</option>
+                        <option value="Insulation">Insulation</option>
+                        <option value="Materials">Materials</option>
+                    </select>
+                    <div id="invoiceTradeRateInfo" class="rate-info"></div>
                 </div>
-
+                <div class="form-group">
+                    <label>Description *</label>
+                    <input type="text" id="invoiceDescription" placeholder="Describe the work">
+                </div>
                 <div class="form-grid">
                     <div class="form-group">
                         <label>Quantity *</label>
                         <input type="number" id="invoiceQuantity" value="1" min="0.1" step="0.1">
                     </div>
                     <div class="form-group">
-                        <label>Rate Type</label>
-                        <div class="rate-type-selector">
-                            <button type="button" class="rate-type-btn invoice-rate-btn" data-type="hourly">Hourly Rate</button>
-                            <button type="button" class="rate-type-btn invoice-rate-btn" data-type="daily">Day Rate</button>
-                            <button type="button" class="rate-type-btn invoice-rate-btn active" data-type="job">Per Job</button>
-                            <button type="button" class="rate-type-btn invoice-rate-btn" data-type="custom">Custom</button>
-                        </div>
+                        <label id="invoiceRateLabel">Unit Price (GBP) *</label>
+                        <input type="number" id="invoiceUnitPrice" placeholder="0.00" step="0.01" min="0">
                     </div>
                 </div>
-
-                <div class="form-grid">
-                    <div class="form-group">
-                        <label id="invoiceRateLabel">Unit Price (£) *</label>
-                        <input type="number" id="invoiceUnitPrice" placeholder="Enter price or use standard rate" step="0.01" min="0">
-                    </div>
-                    <div class="form-group hidden" id="invoiceCustomUnitGroup">
-                        <label>Custom Unit Name</label>
-                        <input type="text" id="invoiceCustomUnit" placeholder="e.g., per sqm, per item">
-                    </div>
-                </div>
-
-                <button class="btn btn-primary" onclick="addInvoiceItem()">Add Item to Invoice</button>
+                <button class="btn-primary" onclick="addInvoiceItem()">Add Item</button>
             </div>
 
-            <div class="section" id="invoiceItemsSection" style="display: none;">
-                <h2 class="section-title">Invoice Items</h2>
+            <div class="form-section" id="invoiceItemsSection" style="display: none;">
+                <div class="form-section-title">Invoice Items</div>
                 <div style="overflow-x: auto;">
-                    <table>
+                    <table class="items-table">
                         <thead>
                             <tr>
                                 <th>Category</th>
                                 <th>Description</th>
-                                <th class="text-center">Qty</th>
-                                <th class="text-right">Unit Price</th>
-                                <th class="text-right">Total</th>
-                                <th class="text-center">Action</th>
+                                <th>Qty</th>
+                                <th>Price</th>
+                                <th>Total</th>
+                                <th>Action</th>
                             </tr>
                         </thead>
                         <tbody id="invoiceItems"></tbody>
@@ -484,102 +656,138 @@
                 </div>
             </div>
 
-            <div class="section" id="invoiceNotesSection">
-                <h2 class="section-title">Additional Notes (Optional)</h2>
+            <div class="form-section" id="invoiceDeductionSection" style="display: none;">
+                <div class="form-section-title">Deductions</div>
                 <div class="form-group">
-                    <label>Custom Notes</label>
-                    <textarea id="invoiceCustomNotes" rows="4" placeholder="Add any additional notes or payment terms..."></textarea>
-                </div>
-            </div>
-
-            <div class="section" id="invoiceDeductionSection">
-                <h2 class="section-title">Deductions (Optional)</h2>
-                <div class="form-group">
-                    <label for="invoiceDeduction">Deduction Amount (£)</label>
+                    <label>Deduction Amount (GBP)</label>
                     <input type="number" id="invoiceDeduction" step="0.01" min="0" value="0" placeholder="0.00">
-                    <small style="display: block; margin-top: 5px; color: #666; font-size: 12px;">Enter any amount to deduct from the total (after VAT)</small>
                 </div>
             </div>
 
-            <div id="generateInvoiceSection" style="display: none; margin-top: 20px; text-align: center;">
-                <button class="btn btn-success" onclick="previewInvoice()">Preview Invoice</button>
-                <button class="btn btn-secondary" onclick="downloadInvoice()">Download PDF</button>
+            <div id="generateInvoiceSection" style="display: none; padding: 15px;">
+                <button class="btn-accent" onclick="previewInvoice()">Preview Invoice</button>
+                <button class="btn-primary" onclick="downloadInvoice()" style="margin-top: 10px;">Download PDF</button>
             </div>
         </div>
 
+        <!-- Invoice Preview Modal -->
         <div id="invoicePreviewModal" class="modal">
             <div class="modal-content">
                 <div class="modal-header">
-                    <span class="close" onclick="closeInvoicePreview()">&times;</span>
+                    <span class="close" onclick="closeInvoicePreview()">x</span>
                     <h2>Invoice Preview</h2>
                 </div>
-                <div class="modal-body" id="invoicePreviewBody">
-                </div>
+                <div class="modal-body" id="invoicePreviewBody"></div>
                 <div class="modal-footer">
-                    <button class="btn btn-success" onclick="downloadInvoice()">Download PDF</button>
-                    <button class="btn btn-secondary" onclick="closeInvoicePreview()">Close</button>
+                    <button class="btn-primary" onclick="downloadInvoice()">Download PDF</button>
+                    <button class="btn-secondary" onclick="closeInvoicePreview()">Close</button>
                 </div>
             </div>
         </div>
     </div>
-    
-    <!-- Matrix Animation Script -->
-    <script>
-        const canvas = document.getElementById('matrix');
-        const ctx = canvas.getContext('2d');
 
-        canvas.width = window.innerWidth;
-        canvas.height = window.innerHeight;
-
-        const chars = 'ｱｲｳｴｵｶｷｸｹｺｻｼｽｾｿﾀﾁﾂﾃﾄﾅﾆﾇﾈﾉﾊﾋﾌﾍﾎﾏﾐﾑﾒﾓﾔﾕﾖﾗﾘﾙﾚﾛﾜﾝABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789@#$%^&*()';
-        const charArray = chars.split('');
-
-        const fontSize = 16;
-        const columns = canvas.width / fontSize;
-
-        const drops = [];
-        for (let i = 0; i < columns; i++) {
-            drops[i] = Math.floor(Math.random() * canvas.height / fontSize);
-        }
-
-        function draw() {
-            ctx.fillStyle = 'rgba(0, 0, 0, 0.05)';
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-            ctx.font = fontSize + 'px monospace';
-
-            for (let i = 0; i < drops.length; i++) {
-                const char = charArray[Math.floor(Math.random() * charArray.length)];
-                const gradient = Math.min(255, 100 + drops[i] * 10);
-                ctx.fillStyle = `rgb(0, ${gradient}, 0)`;
-                ctx.fillText(char, i * fontSize, drops[i] * fontSize);
-
-                if (drops[i] * fontSize > canvas.height && Math.random() > 0.975) {
-                    drops[i] = 0;
-                }
-                drops[i]++;
-            }
-        }
-
-        const matrixInterval = setInterval(draw, 35);
-
-        window.addEventListener('resize', () => {
-            canvas.width = window.innerWidth;
-            canvas.height = window.innerHeight;
-            drops.length = 0;
-            const newColumns = canvas.width / fontSize;
-            for (let i = 0; i < newColumns; i++) {
-                drops[i] = Math.floor(Math.random() * canvas.height / fontSize);
-            }
-        });
-    </script>
-
-    <!-- Load Scripts in Order -->
+    <!-- Scripts -->
     <script src="auth.js"></script>
-    <script src="navigation.js"></script>
     <script src="script.js"></script>
-    <script src="pdf_generator.js"></script>
     <script src="invoice.js"></script>
+    <script src="pdf_generator.js"></script>
     <script src="invoice_pdfgen.js"></script>
+    
+    <script>
+        // App Navigation
+        function switchScreen(screenName) {
+            // Hide all screens
+            document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+            // Show selected screen
+            document.getElementById(screenName + 'Screen').classList.add('active');
+            // Update nav items
+            document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+            document.querySelector(`.nav-item[data-screen="${screenName}"]`).classList.add('active');
+        }
+        
+        function toggleCreateMenu() {
+            document.getElementById('createMenuOverlay').classList.toggle('active');
+        }
+        
+        function createNewInvoice() {
+            toggleCreateMenu();
+            document.getElementById('mainApp').style.display = 'none';
+            document.getElementById('invoiceToolScreen').style.display = 'block';
+        }
+        
+        function createNewEstimate() {
+            toggleCreateMenu();
+            document.getElementById('mainApp').style.display = 'none';
+            document.getElementById('quotationScreen').style.display = 'block';
+        }
+        
+        function backToMain() {
+            document.getElementById('quotationScreen').style.display = 'none';
+            document.getElementById('invoiceToolScreen').style.display = 'none';
+            document.getElementById('mainApp').style.display = 'block';
+        }
+        
+        function showSettings() {
+            switchScreen('more');
+        }
+        
+        function showSearch() {
+            alert('Search coming soon!');
+        }
+        
+        function showPromo() {
+            alert('Welcome to OMEGA Pro! All features are available.');
+        }
+        
+        function showProfile() {
+            alert('Profile editing coming soon!');
+        }
+        
+        function showBankDetails() {
+            alert('Bank details editing coming soon!');
+        }
+        
+        function handleLogout() {
+            if (confirm('Are you sure you want to log out?')) {
+                if (typeof logout === 'function') {
+                    logout();
+                }
+                document.getElementById('mainApp').style.display = 'none';
+                document.getElementById('authScreen').style.display = 'block';
+                if (typeof renderAuthScreen === 'function') {
+                    renderAuthScreen();
+                }
+            }
+        }
+        
+        // Initialize app
+        document.addEventListener('DOMContentLoaded', async function() {
+            // Show splash for 2 seconds
+            setTimeout(async function() {
+                document.getElementById('splashScreen').classList.add('hidden');
+                
+                // Check authentication
+                let isLoggedIn = false;
+                if (typeof initAuth === 'function') {
+                    isLoggedIn = await initAuth();
+                }
+                
+                if (isLoggedIn) {
+                    document.getElementById('mainApp').style.display = 'block';
+                } else {
+                    document.getElementById('authScreen').style.display = 'block';
+                    if (typeof renderAuthScreen === 'function') {
+                        renderAuthScreen();
+                    }
+                }
+            }, 2500);
+        });
+        
+        // Override showDashboard from auth.js
+        window.showDashboard = function() {
+            document.getElementById('authScreen').style.display = 'none';
+            document.getElementById('mainApp').style.display = 'block';
+        };
+    </script>
 </body>
 </html>
